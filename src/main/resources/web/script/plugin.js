@@ -1,4 +1,4 @@
-dm4c.add_plugin("net.abriraqui.import-export", funtion(){
+dm4c.add_plugin("net.abriraqui.import-export", function(){
 
     var topicmap_menu =dm4c.get_plugin("de.deepamehta.topicmaps").get_topicmap_menu()
     topicmap_menu.add_item({
@@ -6,7 +6,7 @@ dm4c.add_plugin("net.abriraqui.import-export", funtion(){
 	handler: import_topicmap
     })
 
-    function(){
+    function import_topicmap(){
 	alert("Import topicmap XX")
     }
 
