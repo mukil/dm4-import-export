@@ -1,7 +1,7 @@
 package net.abriraqui.dm4.importexport;
 
 import de.deepamehta.core.osgi.PluginActivator;
-
+import de.deepamehta.core.util.JavaUtils;
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.annotation.ConsumesService;
 
@@ -10,6 +10,9 @@ import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
 
 import java.io.Writer;
 import java.io.FileWriter;
+import java.io.File;
+import java.io.FileInputStream;
+
 import java.util.logging.Logger;
 
 import org.codehaus.jettison.json.JSONObject;
@@ -31,7 +34,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/export")
-    public void export(@CookieParam("dm4_topicmap_id") long topicmapId) {
+    public void exportTopicmap(@CookieParam("dm4_topicmap_id") long topicmapId) {
 	try {
 	    log.info("Exporting topicmap #########" + topicmapId);
 	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId);
@@ -44,10 +47,18 @@ public class ImportExportPlugin extends PluginActivator {
 	}
     }
 
-
-
-
-
+    @POST
+    @Path("/import")
+    public void importTopicmap() {
+	try{
+	    File file = new File("topicmap-1373.json");
+	    FileInputStream fis = new FileInputStream(file);
+	    String json = JavaUtils.readText(fis);
+	    log.info("JSON file to be imported #########" + json);
+	} catch (Exception e) {
+	    throw new RuntimeException("Import failed", e );
+	}
+    }
 
 
     // Hook implementation //
