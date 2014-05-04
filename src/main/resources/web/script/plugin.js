@@ -19,6 +19,7 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 	}
 
 	function import_topicmap(){
+	    dm4c.restc.request("POST", "/import-export/import")
 	    alert("Import of topicmap " +  " complete")
 
 	}
