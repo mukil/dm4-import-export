@@ -2,6 +2,7 @@ package net.abriraqui.dm4.importexport;
 
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.util.JavaUtils;
+import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.annotation.ConsumesService;
 
@@ -16,6 +17,7 @@ import java.io.FileInputStream;
 import java.util.logging.Logger;
 
 import org.codehaus.jettison.json.JSONObject;
+import org.codehaus.jettison.json.JSONArray;
 
 import javax.ws.rs.POST;
 
@@ -25,7 +27,6 @@ import javax.ws.rs.CookieParam;
 @Path("/import-export")
 public class ImportExportPlugin extends PluginActivator {
     
-
     private TopicmapsService topicmapsService;
 
     private Logger log = Logger.getLogger(getClass().getName());
@@ -55,6 +56,18 @@ public class ImportExportPlugin extends PluginActivator {
 	    FileInputStream fis = new FileInputStream(file);
 	    String json = JavaUtils.readText(fis);
 	    log.info("JSON file to be imported #########" + json);
+
+	    JSONObject topicmap = new JSONObject(json);
+	    String assocs = topicmap.getString("assocs");
+	    String topics = topicmap.getString("topics");
+	    String info = topicmap.getString("info");
+
+	    JSONArray assocsArray = (JSONArray) topicmap.get("assocs");
+	    log.info("assocsARRAY ##########" + assocsArray);
+	    //	    log.info("assocs ##########" + assocs);
+	    log.info("topics ##########" + topics);
+	    log.info("info  ##########" + info);
+
 	} catch (Exception e) {
 	    throw new RuntimeException("Import failed", e );
 	}
