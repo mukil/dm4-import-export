@@ -1,7 +1,7 @@
 package net.abriraqui.dm4.importexport;
 
 import de.deepamehta.core.osgi.PluginActivator;
-import de.deepamehta.core.service.ClientState;
+
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.annotation.ConsumesService;
 
@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 import org.codehaus.jettison.json.JSONObject;
 
 import javax.ws.rs.POST;
-import javax.ws.rs.HeaderParam;
+
 import javax.ws.rs.Path;
 import javax.ws.rs.CookieParam;
 
@@ -43,6 +43,12 @@ public class ImportExportPlugin extends PluginActivator {
 	    throw new RuntimeException("Export failed", e );
 	}
     }
+
+
+
+
+
+
 
     // Hook implementation //
     
