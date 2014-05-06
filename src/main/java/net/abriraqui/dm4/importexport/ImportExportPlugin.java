@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.FileInputStream;
 
 import java.util.logging.Logger;
+import java.util.Iterator;
+
 
 import org.codehaus.jettison.json.JSONObject;
 import org.codehaus.jettison.json.JSONArray;
@@ -58,15 +60,20 @@ public class ImportExportPlugin extends PluginActivator {
 	    log.info("JSON file to be imported #########" + json);
 
 	    JSONObject topicmap = new JSONObject(json);
-	    String assocs = topicmap.getString("assocs");
-	    String topics = topicmap.getString("topics");
-	    String info = topicmap.getString("info");
+	    //	    String info = topicmap.getString("info");
 
 	    JSONArray assocsArray = (JSONArray) topicmap.get("assocs");
+	    JSONArray topicsArray = (JSONArray) topicmap.get("topics");
+	    
 	    log.info("assocsARRAY ##########" + assocsArray);
-	    //	    log.info("assocs ##########" + assocs);
-	    log.info("topics ##########" + topics);
-	    log.info("info  ##########" + info);
+	    log.info("topicsARRAY ##########" + topicsArray);
+	    
+	    for (int i = 0, size = topicsArray.length(); i < size; i++)
+		{
+		    JSONObject topic =  topicsArray.getJSONObject(i);
+		    // String topic =  topicsArray.getString(i);
+		    log.info("#### topic " + topic);
+		}
 
 	} catch (Exception e) {
 	    throw new RuntimeException("Import failed", e );
