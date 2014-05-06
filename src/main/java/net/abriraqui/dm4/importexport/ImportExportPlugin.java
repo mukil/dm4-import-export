@@ -15,7 +15,8 @@ import java.io.File;
 import java.io.FileInputStream;
 
 import java.util.logging.Logger;
-import java.util.Iterator;
+import java.util.Map;
+import java.util.HashMap;
 
 
 import org.codehaus.jettison.json.JSONObject;
@@ -53,30 +54,29 @@ public class ImportExportPlugin extends PluginActivator {
     @POST
     @Path("/import")
     public void importTopicmap() {
-	try{
+	try {
 	    File file = new File("topicmap-1373.json");
-	    FileInputStream fis = new FileInputStream(file);
-	    String json = JavaUtils.readText(fis);
+	    String json = JavaUtils.readTextFile(file);
 	    log.info("JSON file to be imported #########" + json);
 
 	    JSONObject topicmap = new JSONObject(json);
-	    //	    String info = topicmap.getString("info");
+	    JSONObject info = topicmap.getJSONObject("info");
 
-	    JSONArray assocsArray = (JSONArray) topicmap.get("assocs");
-	    JSONArray topicsArray = (JSONArray) topicmap.get("topics");
+	    JSONArray assocsArray = topicmap.getJSONArray("assocs");
+	    JSONArray topicsArray = topicmap.getJSONArray("topics");
 	    
 	    log.info("assocsARRAY ##########" + assocsArray);
 	    log.info("topicsARRAY ##########" + topicsArray);
+	    Map<Long, Long> map = new HashMap();
 	    
 	    for (int i = 0, size = topicsArray.length(); i < size; i++)
 		{
 		    JSONObject topic =  topicsArray.getJSONObject(i);
-		    // String topic =  topicsArray.getString(i);
 		    log.info("#### topic " + topic);
 		}
 
 	} catch (Exception e) {
-	    throw new RuntimeException("Import failed", e );
+	    throw new RuntimeException("Import failed", e);
 	}
     }
 

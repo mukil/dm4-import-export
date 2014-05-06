@@ -6,7 +6,6 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 	    label: "Export Topicmap",
 	    handler: export_topicmap
 	})
-	topicmap_menu.add_separator()
 	topicmap_menu.add_item({
 	    label: "Import Topicmap",
 	    handler: import_topicmap
@@ -20,6 +19,7 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 
 	function import_topicmap(){
 	    dm4c.restc.request("POST", "/import-export/import")
+	    dm4c.get_plugin("de.deepamehta.files").open_upload_dialog("/home/sonduk/Documentos", function(){})
 	    alert("Import of topicmap " +  " complete")
 
 	}
