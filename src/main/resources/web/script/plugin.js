@@ -12,8 +12,8 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 	})
 	
 	function export_topicmap(){
-	    var topicmap = dm4c.get_plugin("de.deepamehta.topicmaps").get_topicmap()
 	    dm4c.restc.request("POST", "/import-export/export")
+	    var topicmap = dm4c.get_plugin("de.deepamehta.topicmaps").get_topicmap()
 	    alert("Export of topicmap " + topicmap.get_id() + " complete")
 	}
 
