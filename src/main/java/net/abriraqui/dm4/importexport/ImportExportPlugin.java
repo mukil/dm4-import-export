@@ -5,6 +5,9 @@ import de.deepamehta.core.util.JavaUtils;
 import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.annotation.ConsumesService;
+import de.deepamehta.core.Topic;
+import de.deepamehta.core.model.TopicModel;
+import de.deepamehta.core.model.CompositeValueModel;
 
 import de.deepamehta.plugins.topicmaps.service.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
@@ -65,14 +68,29 @@ public class ImportExportPlugin extends PluginActivator {
 	    JSONArray assocsArray = topicmap.getJSONArray("assocs");
 	    JSONArray topicsArray = topicmap.getJSONArray("topics");
 	    
-	    log.info("assocsARRAY ##########" + assocsArray);
-	    log.info("topicsARRAY ##########" + topicsArray);
-	    Map<Long, Long> map = new HashMap();
+	    //	    log.info("assocsARRAY ##########" + assocsArray);
+	    //	    log.info("topicsARRAY ##########" + topicsArray);
+
+	    Topic importedTopicmap = topicmapsService.createTopicmap("Topicmap2","dm4.webclient.default_topicmap_renderer", null);
+	    long topicmapId = importedTopicmap.getId();
+
+	    Map<Long, Long> mapTopicIds = new HashMap();
 	    
 	    for (int i = 0, size = topicsArray.length(); i < size; i++)
 		{
 		    JSONObject topic =  topicsArray.getJSONObject(i);
-		    log.info("#### topic " + topic);
+		    long origTopicId = topic.getLong("id");
+		    //		    JSONObject uri = topic.getJSONObject("uri");
+		    //		    String typeUri = topic.getString("typeUri");
+		    //		    String value = topic.getString("value");
+		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props"));
+		
+		    TopicModel model = new TopicModel(topic);
+		    Topic newTopic =  dms.createTopic(model, null);
+		    long topicId = newTopic.getId();
+		    mapTopicIds.put(origTopicId, topicId);
+		    topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
+		    log.info("#### topic " + i + " = "+ topicmapId);
 		}
 
 	} catch (Exception e) {
