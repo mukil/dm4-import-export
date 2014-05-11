@@ -58,7 +58,7 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/import")
     public void importTopicmap() {
 	try {
-	    File file = new File("topicmap-1373.json");
+	    File file = new File("topicmap-2751.json");
 	    String json = JavaUtils.readTextFile(file);
 	    log.info("JSON file to be imported #########" + json);
 
@@ -68,10 +68,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    JSONArray assocsArray = topicmap.getJSONArray("assocs");
 	    JSONArray topicsArray = topicmap.getJSONArray("topics");
 	    
-	    //	    log.info("assocsARRAY ##########" + assocsArray);
-	    //	    log.info("topicsARRAY ##########" + topicsArray);
-
-	    Topic importedTopicmap = topicmapsService.createTopicmap("Topicmap2","dm4.webclient.default_topicmap_renderer", null);
+	    Topic importedTopicmap = topicmapsService.createTopicmap("importedTopicmap3","dm4.webclient.default_topicmap_renderer", null);
 	    long topicmapId = importedTopicmap.getId();
 
 	    Map<Long, Long> mapTopicIds = new HashMap();
@@ -80,17 +77,13 @@ public class ImportExportPlugin extends PluginActivator {
 		{
 		    JSONObject topic =  topicsArray.getJSONObject(i);
 		    long origTopicId = topic.getLong("id");
-		    //		    JSONObject uri = topic.getJSONObject("uri");
-		    //		    String typeUri = topic.getString("typeUri");
-		    //		    String value = topic.getString("value");
 		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props"));
-		
 		    TopicModel model = new TopicModel(topic);
 		    Topic newTopic =  dms.createTopic(model, null);
 		    long topicId = newTopic.getId();
 		    mapTopicIds.put(origTopicId, topicId);
 		    topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
-		    log.info("#### topic " + i + " = "+ topicmapId);
+		    log.info("#### -----> model " + " = "+ model);
 		}
 
 	} catch (Exception e) {
