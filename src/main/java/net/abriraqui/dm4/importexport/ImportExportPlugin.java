@@ -6,8 +6,11 @@ import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.annotation.ConsumesService;
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.Association;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.CompositeValueModel;
+import de.deepamehta.core.model.AssociationModel;
+import de.deepamehta.core.model.TopicRoleModel;
 
 import de.deepamehta.plugins.topicmaps.service.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
@@ -68,22 +71,54 @@ public class ImportExportPlugin extends PluginActivator {
 	    JSONArray assocsArray = topicmap.getJSONArray("assocs");
 	    JSONArray topicsArray = topicmap.getJSONArray("topics");
 	    
-	    Topic importedTopicmap = topicmapsService.createTopicmap("importedTopicmap3","dm4.webclient.default_topicmap_renderer", null);
+	    Topic importedTopicmap = topicmapsService.createTopicmap("importedTopicmap5","dm4.webclient.default_topicmap_renderer", null);
 	    long topicmapId = importedTopicmap.getId();
 
 	    Map<Long, Long> mapTopicIds = new HashMap();
 	    
+	    // Import topics
+	    
 	    for (int i = 0, size = topicsArray.length(); i < size; i++)
 		{
+
 		    JSONObject topic =  topicsArray.getJSONObject(i);
-		    long origTopicId = topic.getLong("id");
 		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props"));
-		    TopicModel model = new TopicModel(topic);
-		    Topic newTopic =  dms.createTopic(model, null);
-		    long topicId = newTopic.getId();
-		    mapTopicIds.put(origTopicId, topicId);
-		    topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
-		    log.info("#### -----> model " + " = "+ model);
+		     TopicModel model = new TopicModel(topic);
+		     Topic newTopic =  dms.createTopic(model, null);
+
+		     long topicId = newTopic.getId();
+		     long origTopicId = topic.getLong("id");
+		     mapTopicIds.put(origTopicId, topicId);
+		     topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
+		}
+		
+	    // Import associations
+	    
+	    for (int i=0, size = assocsArray.length(); i< size; i++)
+		{		    
+		    JSONObject assoc =  assocsArray.getJSONObject(i);
+		    String uri = assoc.getString("uri");
+		    String typeUri = assoc.getString("type_uri");
+		    String value = assoc.getString("value");
+		    JSONObject  role1 = assoc.getJSONObject("role_1");
+		    JSONObject  role2 = assoc.getJSONObject("role_2");
+		    Long role1_origTopicId = role1.getLong("topic_id");
+		    Long role2_origTopicId = role2.getLong("topic_id");
+		    Long role1_newTopicId = mapTopicIds.get(role1_origTopicId);
+		    Long role2_newTopicId = mapTopicIds.get(role2_origTopicId);
+		    String role1_roleTypeUri = role1.getString("role_type_uri");
+		    String role2_roleTypeUri = role2.getString("role_type_uri");
+ 		    CompositeValueModel composite =new CompositeValueModel(assoc.getJSONObject("composite"));
+
+		    AssociationModel assocModel = new AssociationModel(typeUri,
+								  new TopicRoleModel(role1_newTopicId, role1_roleTypeUri),
+								  new TopicRoleModel(role2_newTopicId, role2_roleTypeUri),
+								  composite
+								  );
+
+   		    Association newAssociation = dms.createAssociation(assocModel, null);
+   		    long assocId = newAssociation.getId();
+		    topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
 		}
 
 	} catch (Exception e) {
