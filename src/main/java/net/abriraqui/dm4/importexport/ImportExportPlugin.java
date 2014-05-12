@@ -11,6 +11,7 @@ import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.CompositeValueModel;
 import de.deepamehta.core.model.AssociationModel;
 import de.deepamehta.core.model.TopicRoleModel;
+import de.deepamehta.core.model.SimpleValue;
 
 import de.deepamehta.plugins.topicmaps.service.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
@@ -82,9 +83,13 @@ public class ImportExportPlugin extends PluginActivator {
 		{
 
 		    JSONObject topic =  topicsArray.getJSONObject(i);
-		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props"));
-		     TopicModel model = new TopicModel(topic);
-		     Topic newTopic =  dms.createTopic(model, null);
+		    TopicModel model = new TopicModel(topic);
+
+		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
+
+		    log.info("####### model " + model);
+		    Topic newTopic =  dms.createTopic(model, null);
+		    log.info("####### newTopic " + newTopic);
 
 		     long topicId = newTopic.getId();
 		     long origTopicId = topic.getLong("id");
@@ -99,7 +104,7 @@ public class ImportExportPlugin extends PluginActivator {
 		    JSONObject assoc =  assocsArray.getJSONObject(i);
 		    String uri = assoc.getString("uri");
 		    String typeUri = assoc.getString("type_uri");
-		    String value = assoc.getString("value");
+		    Long id = assoc.getLong("id");
 		    JSONObject  role1 = assoc.getJSONObject("role_1");
 		    JSONObject  role2 = assoc.getJSONObject("role_2");
 		    Long role1_origTopicId = role1.getLong("topic_id");
@@ -109,16 +114,19 @@ public class ImportExportPlugin extends PluginActivator {
 		    String role1_roleTypeUri = role1.getString("role_type_uri");
 		    String role2_roleTypeUri = role2.getString("role_type_uri");
  		    CompositeValueModel composite =new CompositeValueModel(assoc.getJSONObject("composite"));
+		    SimpleValue assocValue = new SimpleValue(assoc.getString("value"));
 
-		    AssociationModel assocModel = new AssociationModel(typeUri,
+		    AssociationModel assocModel = new AssociationModel(id, uri, typeUri,
 								  new TopicRoleModel(role1_newTopicId, role1_roleTypeUri),
 								  new TopicRoleModel(role2_newTopicId, role2_roleTypeUri),
-								  composite
+								       assocValue, 
+								       composite
 								  );
-
+		    
    		    Association newAssociation = dms.createAssociation(assocModel, null);
    		    long assocId = newAssociation.getId();
 		    topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
+		    
 		}
 
 	} catch (Exception e) {
