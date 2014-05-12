@@ -12,6 +12,7 @@ import de.deepamehta.core.model.CompositeValueModel;
 import de.deepamehta.core.model.AssociationModel;
 import de.deepamehta.core.model.TopicRoleModel;
 import de.deepamehta.core.model.SimpleValue;
+import de.deepamehta.core.storage.spi.DeepaMehtaTransaction;
 
 import de.deepamehta.plugins.topicmaps.service.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
@@ -61,6 +62,9 @@ public class ImportExportPlugin extends PluginActivator {
     @POST
     @Path("/import")
     public void importTopicmap() {
+
+	DeepaMehtaTransaction tx = dms.beginTx();
+
 	try {
 	    File file = new File("topicmap-2751.json");
 	    String json = JavaUtils.readTextFile(file);
@@ -83,6 +87,7 @@ public class ImportExportPlugin extends PluginActivator {
 		{
 
 		    JSONObject topic =  topicsArray.getJSONObject(i);
+		    SimpleValue topicValue = new SimpleValue(topic.getString("value"));
 		    TopicModel model = new TopicModel(topic);
 
 		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
@@ -90,11 +95,12 @@ public class ImportExportPlugin extends PluginActivator {
 		    log.info("####### model " + model);
 		    Topic newTopic =  dms.createTopic(model, null);
 		    log.info("####### newTopic " + newTopic);
-
+		    newTopic.setSimpleValue(topicValue);
 		     long topicId = newTopic.getId();
 		     long origTopicId = topic.getLong("id");
 		     mapTopicIds.put(origTopicId, topicId);
 		     topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
+		     tx.success();
 		}
 		
 	    // Import associations
@@ -131,6 +137,8 @@ public class ImportExportPlugin extends PluginActivator {
 
 	} catch (Exception e) {
 	    throw new RuntimeException("Import failed", e);
+	} finally {
+	    tx.finish();
 	}
     }
 
