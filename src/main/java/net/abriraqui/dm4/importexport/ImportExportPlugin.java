@@ -10,7 +10,7 @@ import de.deepamehta.core.Association;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.CompositeValueModel;
 import de.deepamehta.core.model.AssociationModel;
-import de.deepamehta.core.model.TopicRoleModel;
+import de.deepamehta.core.model.RoleModel;
 import de.deepamehta.core.model.SimpleValue;
 import de.deepamehta.core.storage.spi.DeepaMehtaTransaction;
 
@@ -49,7 +49,7 @@ public class ImportExportPlugin extends PluginActivator {
     public void exportTopicmap(@CookieParam("dm4_topicmap_id") long topicmapId) {
 	try {
 	    log.info("Exporting topicmap #########" + topicmapId);
-	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId);
+	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
 	    Writer writer = new FileWriter("topicmap-" + topicmapId + ".json");
 	    JSONObject json = topicmap.toJSON();
 	    json.write(writer);
@@ -66,18 +66,21 @@ public class ImportExportPlugin extends PluginActivator {
 	DeepaMehtaTransaction tx = dms.beginTx();
 
 	try {
-	    File file = new File("topicmap-2751.json");
+
+	    File file = new File("topicmap-11216.json");
+
 	    String json = JavaUtils.readTextFile(file);
-	    log.info("JSON file to be imported #########" + json);
 
 	    JSONObject topicmap = new JSONObject(json);
 	    JSONObject info = topicmap.getJSONObject("info");
 
 	    JSONArray assocsArray = topicmap.getJSONArray("assocs");
 	    JSONArray topicsArray = topicmap.getJSONArray("topics");
-	    
-	    Topic importedTopicmap = topicmapsService.createTopicmap("importedTopicmap5","dm4.webclient.default_topicmap_renderer", null);
+
+	    Topic importedTopicmap = topicmapsService.createTopicmap("importedTopicmapWithComposite","dm4.webclient.default_topicmap_renderer", null);
+	    log.info("Hola :-) ");
 	    long topicmapId = importedTopicmap.getId();
+	    log.info("###### importedTopicapId " + topicmapId);
 
 	    Map<Long, Long> mapTopicIds = new HashMap();
 	    
@@ -85,7 +88,6 @@ public class ImportExportPlugin extends PluginActivator {
 	    
 	    for (int i = 0, size = topicsArray.length(); i < size; i++)
 		{
-
 		    JSONObject topic =  topicsArray.getJSONObject(i);
 		    SimpleValue topicValue = new SimpleValue(topic.getString("value"));
 		    TopicModel model = new TopicModel(topic);
@@ -96,11 +98,12 @@ public class ImportExportPlugin extends PluginActivator {
 		    Topic newTopic =  dms.createTopic(model, null);
 		    log.info("####### newTopic " + newTopic);
 		    newTopic.setSimpleValue(topicValue);
-		     long topicId = newTopic.getId();
-		     long origTopicId = topic.getLong("id");
-		     mapTopicIds.put(origTopicId, topicId);
-		     topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
-		     tx.success();
+
+		    long topicId = newTopic.getId();
+		    long origTopicId = topic.getLong("id");
+		    mapTopicIds.put(origTopicId, topicId);
+		    topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
+		    tx.success();
 		}
 		
 	    // Import associations
@@ -111,9 +114,11 @@ public class ImportExportPlugin extends PluginActivator {
 		    String uri = assoc.getString("uri");
 		    String typeUri = assoc.getString("type_uri");
 		    Long id = assoc.getLong("id");
+		    /*		    
 		    JSONObject  role1 = assoc.getJSONObject("role_1");
 		    JSONObject  role2 = assoc.getJSONObject("role_2");
-		    Long role1_origTopicId = role1.getLong("topic_id");
+
+		    		    Long role1_origTopicId = role1.getLong("topic_id");
 		    Long role2_origTopicId = role2.getLong("topic_id");
 		    Long role1_newTopicId = mapTopicIds.get(role1_origTopicId);
 		    Long role2_newTopicId = mapTopicIds.get(role2_origTopicId);
@@ -129,7 +134,17 @@ public class ImportExportPlugin extends PluginActivator {
 								       composite
 								  );
 		    
-   		    Association newAssociation = dms.createAssociation(assocModel, null);
+		    */		    
+		    AssociationModel assocModel = new AssociationModel(assocsArray.getJSONObject(i));
+
+		    RoleModel role1 = assocModel.getRoleModel1();
+		    role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
+		    RoleModel role2 = assocModel.getRoleModel1();
+		    role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
+		    Association assoc =  dms.createAssociation(model, null);
+
+
+   		    //Association newAssociation = dms.createAssociation(assocModel, null);
    		    long assocId = newAssociation.getId();
 		    topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
 		    
