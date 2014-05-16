@@ -61,13 +61,12 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/import")
-    public void importTopicmap() {
-
-	DeepaMehtaTransaction tx = dms.beginTx();
+    public ImportedTopicmap importTopicmap() {
 
 	try {
 
-	    File file = new File("topicmap-11216.json");
+	    	    File file = new File("topicmap-11216.json");
+	    //	    File file = new File("topicmap-1373.json");
 
 	    String json = JavaUtils.readTextFile(file);
 
@@ -77,8 +76,8 @@ public class ImportExportPlugin extends PluginActivator {
 	    JSONArray assocsArray = topicmap.getJSONArray("assocs");
 	    JSONArray topicsArray = topicmap.getJSONArray("topics");
 
-	    Topic importedTopicmap = topicmapsService.createTopicmap("importedTopicmapWithComposite","dm4.webclient.default_topicmap_renderer", null);
-	    log.info("Hola :-) ");
+	    Topic importedTopicmap = topicmapsService.createTopicmap("Imported Topicmap 2","dm4.webclient.default_topicmap_renderer", null);
+
 	    long topicmapId = importedTopicmap.getId();
 	    log.info("###### importedTopicapId " + topicmapId);
 
@@ -89,72 +88,41 @@ public class ImportExportPlugin extends PluginActivator {
 	    for (int i = 0, size = topicsArray.length(); i < size; i++)
 		{
 		    JSONObject topic =  topicsArray.getJSONObject(i);
-		    SimpleValue topicValue = new SimpleValue(topic.getString("value"));
 		    TopicModel model = new TopicModel(topic);
-
 		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
-
-		    log.info("####### model " + model);
+	
 		    Topic newTopic =  dms.createTopic(model, null);
-		    log.info("####### newTopic " + newTopic);
-		    newTopic.setSimpleValue(topicValue);
-
+	
 		    long topicId = newTopic.getId();
 		    long origTopicId = topic.getLong("id");
 		    mapTopicIds.put(origTopicId, topicId);
 		    topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
-		    tx.success();
+		    
 		}
 		
 	    // Import associations
 	    
 	    for (int i=0, size = assocsArray.length(); i< size; i++)
 		{		    
-		    JSONObject assoc =  assocsArray.getJSONObject(i);
-		    String uri = assoc.getString("uri");
-		    String typeUri = assoc.getString("type_uri");
-		    Long id = assoc.getLong("id");
-		    /*		    
-		    JSONObject  role1 = assoc.getJSONObject("role_1");
-		    JSONObject  role2 = assoc.getJSONObject("role_2");
 
-		    		    Long role1_origTopicId = role1.getLong("topic_id");
-		    Long role2_origTopicId = role2.getLong("topic_id");
-		    Long role1_newTopicId = mapTopicIds.get(role1_origTopicId);
-		    Long role2_newTopicId = mapTopicIds.get(role2_origTopicId);
-		    String role1_roleTypeUri = role1.getString("role_type_uri");
-		    String role2_roleTypeUri = role2.getString("role_type_uri");
- 		    CompositeValueModel composite =new CompositeValueModel(assoc.getJSONObject("composite"));
-		    SimpleValue assocValue = new SimpleValue(assoc.getString("value"));
-
-		    AssociationModel assocModel = new AssociationModel(id, uri, typeUri,
-								  new TopicRoleModel(role1_newTopicId, role1_roleTypeUri),
-								  new TopicRoleModel(role2_newTopicId, role2_roleTypeUri),
-								       assocValue, 
-								       composite
-								  );
-		    
-		    */		    
 		    AssociationModel assocModel = new AssociationModel(assocsArray.getJSONObject(i));
 
 		    RoleModel role1 = assocModel.getRoleModel1();
 		    role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
-		    RoleModel role2 = assocModel.getRoleModel1();
+		    RoleModel role2 = assocModel.getRoleModel2();
 		    role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
-		    Association assoc =  dms.createAssociation(model, null);
 
-
-   		    //Association newAssociation = dms.createAssociation(assocModel, null);
+   		    Association newAssociation = dms.createAssociation(assocModel, null);
    		    long assocId = newAssociation.getId();
 		    topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
 		    
 		}
+	    
+	    return new ImportedTopicmap(topicmapId);
 
 	} catch (Exception e) {
 	    throw new RuntimeException("Import failed", e);
-	} finally {
-	    tx.finish();
-	}
+	} 
     }
 
 
