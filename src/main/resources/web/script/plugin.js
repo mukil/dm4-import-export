@@ -24,8 +24,8 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 	    var response =  dm4c.restc.request("POST", "/import-export/import")
 //	    dm4c.get_plugin("de.deepamehta.files").open_upload_dialog("/home/sonduk/Documentos", function(){})
 	    console.log(response.topicmap_id);
-	    alert("Import of topicmap " +  " complete")
-
+//	    alert("Import of topicmap " +  " complete")
+	    dm4c.get_plugin("de.deepamehta.topicmaps").add_topicmap(response.topicmap_id)
 	}
 
 
