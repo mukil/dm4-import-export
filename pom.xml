@@ -21,6 +21,11 @@
       <artifactId>deepamehta-topicmaps</artifactId>
       <version>4.3-SNAPSHOT</version>
     </dependency>    
+    <dependency>
+      <groupId>de.deepamehta</groupId>
+      <artifactId>deepamehta-files</artifactId>
+      <version>4.3-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
 
