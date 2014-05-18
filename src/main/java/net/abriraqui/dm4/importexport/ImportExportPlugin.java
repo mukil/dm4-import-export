@@ -16,11 +16,13 @@ import de.deepamehta.core.storage.spi.DeepaMehtaTransaction;
 
 import de.deepamehta.plugins.topicmaps.service.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
+import de.deepamehta.plugins.files.UploadedFile;
 
 import java.io.Writer;
 import java.io.FileWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 
 import java.util.logging.Logger;
 import java.util.Map;
@@ -33,9 +35,12 @@ import org.codehaus.jettison.json.JSONArray;
 import javax.ws.rs.POST;
 
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 
 @Path("/import-export")
+@Produces("application/json")
 public class ImportExportPlugin extends PluginActivator {
     
     private TopicmapsService topicmapsService;
@@ -61,22 +66,21 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/import")
-    public ImportedTopicmap importTopicmap() {
+    @Consumes("multipart/form-data")
+    public ImportedTopicmap importTopicmap(UploadedFile file) {
 
 	try {
 
-	    	    File file = new File("topicmap-11216.json");
-	    //	    File file = new File("topicmap-1373.json");
-
-	    String json = JavaUtils.readTextFile(file);
+	    String json = file.getString();
 
 	    JSONObject topicmap = new JSONObject(json);
 	    JSONObject info = topicmap.getJSONObject("info");
 
 	    JSONArray assocsArray = topicmap.getJSONArray("assocs");
 	    JSONArray topicsArray = topicmap.getJSONArray("topics");
-
-	    Topic importedTopicmap = topicmapsService.createTopicmap("Imported Topicmap 2","dm4.webclient.default_topicmap_renderer", null);
+	  
+	    String origTopicmapName = info.getString("value");
+	    Topic importedTopicmap = topicmapsService.createTopicmap("Imported Topicmap: "+ origTopicmapName,"dm4.webclient.default_topicmap_renderer", null);
 
 	    long topicmapId = importedTopicmap.getId();
 	    log.info("###### importedTopicapId " + topicmapId);
