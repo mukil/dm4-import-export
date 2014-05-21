@@ -16,13 +16,17 @@ import de.deepamehta.core.storage.spi.DeepaMehtaTransaction;
 
 import de.deepamehta.plugins.topicmaps.service.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
+
+import de.deepamehta.plugins.files.service.FilesService;
 import de.deepamehta.plugins.files.UploadedFile;
+
 
 import java.io.Writer;
 import java.io.FileWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 
 import java.util.logging.Logger;
 import java.util.Map;
@@ -44,6 +48,7 @@ import javax.ws.rs.CookieParam;
 public class ImportExportPlugin extends PluginActivator {
     
     private TopicmapsService topicmapsService;
+    private FilesService filesService;
 
     private Logger log = Logger.getLogger(getClass().getName());
 
@@ -51,23 +56,24 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/export")
-    public void exportTopicmap(@CookieParam("dm4_topicmap_id") long topicmapId) {
+    public Topic exportTopicmap(@CookieParam("dm4_topicmap_id") long topicmapId) {
+
 	try {
 	    log.info("Exporting topicmap #########" + topicmapId);
 	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
-	    Writer writer = new FileWriter("topicmap-" + topicmapId + ".json");
-	    JSONObject json = topicmap.toJSON();
-	    json.write(writer);
-	    writer.close();
+	    String str = topicmap.toJSON().toString();
+	    InputStream in = new ByteArrayInputStream(str.getBytes("UTF-8"));
+	    Topic createdFile = filesService.createFile(in, "/topicmap-" + topicmapId + ".txt");
+	    return createdFile;
 	} catch (Exception e) {
 	    throw new RuntimeException("Export failed", e );
-	}
+	} 
     }
 
     @POST
     @Path("/import")
     @Consumes("multipart/form-data")
-    public ImportedTopicmap importTopicmap(UploadedFile file) {
+    public Topic importTopicmap(UploadedFile file) {
 
 	try {
 
@@ -94,11 +100,11 @@ public class ImportExportPlugin extends PluginActivator {
 		    JSONObject topic =  topicsArray.getJSONObject(i);
 		    TopicModel model = new TopicModel(topic);
 		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
+		    long origTopicId = model.getId();
 	
 		    Topic newTopic =  dms.createTopic(model, null);
-	
 		    long topicId = newTopic.getId();
-		    long origTopicId = topic.getLong("id");
+
 		    mapTopicIds.put(origTopicId, topicId);
 		    topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
 		    
@@ -122,7 +128,7 @@ public class ImportExportPlugin extends PluginActivator {
 		    
 		}
 	    
-	    return new ImportedTopicmap(topicmapId);
+	    return importedTopicmap;
 
 	} catch (Exception e) {
 	    throw new RuntimeException("Import failed", e);
@@ -133,15 +139,25 @@ public class ImportExportPlugin extends PluginActivator {
     // Hook implementation //
     
     @Override
-    @ConsumesService("de.deepamehta.plugins.topicmaps.service.TopicmapsService")
-    public void serviceArrived(PluginService service) {
-	topicmapsService = (TopicmapsService) service;
-    }
+    @ConsumesService({
+	    "de.deepamehta.plugins.topicmaps.service.TopicmapsService",
+	    "de.deepamehta.plugins.files.service.FilesService"      
+    })
 
+    public void serviceArrived(PluginService service) {
+	if (service instanceof TopicmapsService) {
+            topicmapsService = (TopicmapsService) service;
+        } else if (service instanceof FilesService) {
+            filesService = (FilesService) service;
+        }
+    }
+   
     @Override
     public void serviceGone(PluginService service) {
-	topicmapsService = null;
+	if (service == topicmapsService) {
+	    topicmapsService = null;
+        } else if (service == filesService) {
+	    filesService = null;
+        }
     }
-
-
 }
