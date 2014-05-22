@@ -61,7 +61,7 @@ public class ImportExportPlugin extends PluginActivator {
 	try {
 	    log.info("Exporting topicmap #########" + topicmapId);
 	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
-	    String str = topicmap.toJSON().toString();
+	    String json = topicmap.toJSON().toString();
 	    InputStream in = new ByteArrayInputStream(str.getBytes("UTF-8"));
 	    Topic createdFile = filesService.createFile(in, "/topicmap-" + topicmapId + ".txt");
 	    return createdFile;
@@ -95,38 +95,35 @@ public class ImportExportPlugin extends PluginActivator {
 	    
 	    // Import topics
 	    
-	    for (int i = 0, size = topicsArray.length(); i < size; i++)
-		{
-		    JSONObject topic =  topicsArray.getJSONObject(i);
-		    TopicModel model = new TopicModel(topic);
-		    CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
-		    long origTopicId = model.getId();
-	
-		    Topic newTopic =  dms.createTopic(model, null);
-		    long topicId = newTopic.getId();
-
-		    mapTopicIds.put(origTopicId, topicId);
-		    topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
+	    for (int i = 0, size = topicsArray.length(); i < size; i++)	{
+		JSONObject topic =  topicsArray.getJSONObject(i);
+		TopicModel model = new TopicModel(topic);
+		CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
+		long origTopicId = model.getId();
+		
+		Topic newTopic =  dms.createTopic(model, null);
+		long topicId = newTopic.getId();
+		
+		mapTopicIds.put(origTopicId, topicId);
+		topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
 		    
-		}
+	    }
 		
 	    // Import associations
 	    
-	    for (int i=0, size = assocsArray.length(); i< size; i++)
-		{		    
+	    for (int i=0, size = assocsArray.length(); i< size; i++) {		    
 
-		    AssociationModel assocModel = new AssociationModel(assocsArray.getJSONObject(i));
-
-		    RoleModel role1 = assocModel.getRoleModel1();
-		    role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
-		    RoleModel role2 = assocModel.getRoleModel2();
-		    role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
-
-   		    Association newAssociation = dms.createAssociation(assocModel, null);
-   		    long assocId = newAssociation.getId();
-		    topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
-		    
-		}
+		AssociationModel assocModel = new AssociationModel(assocsArray.getJSONObject(i));
+		RoleModel role1 = assocModel.getRoleModel1();
+		role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
+		RoleModel role2 = assocModel.getRoleModel2();
+		role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
+		
+		Association newAssociation = dms.createAssociation(assocModel, null);
+		long assocId = newAssociation.getId();
+		topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
+		
+	    }
 	    
 	    return importedTopicmap;
 
