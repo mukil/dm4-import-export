@@ -62,7 +62,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    log.info("Exporting topicmap #########" + topicmapId);
 	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
 	    String json = topicmap.toJSON().toString();
-	    InputStream in = new ByteArrayInputStream(str.getBytes("UTF-8"));
+	    InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
 	    Topic createdFile = filesService.createFile(in, "/topicmap-" + topicmapId + ".txt");
 	    return createdFile;
 	} catch (Exception e) {
