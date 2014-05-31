@@ -22,6 +22,11 @@ import de.deepamehta.plugins.topicmaps.model.AssociationViewmodel;
 import de.deepamehta.plugins.files.service.FilesService;
 import de.deepamehta.plugins.files.UploadedFile;
 
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.transform.OutputKeys;
+
 
 import java.io.Writer;
 import java.io.FileWriter;
@@ -45,6 +50,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
+import javax.ws.rs.core.MediaType;
 
 @Path("/import-export")
 @Produces("application/json")
@@ -77,45 +83,74 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/export/svg")
-	public void exportTopicmapToSVG(XMLStreamWriter writer, @CookieParam("dm4_topicmap_id") long topicmapId)  throws XMLStreamException {
+    //    @Produces("image/svg+xml")
+    public void exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId)  throws XMLStreamException {
 	try {
 	    log.info("Exporting topicmap #########" + topicmapId);
 	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
 	    Iterable<TopicViewmodel> topics =topicmap.getTopics();
             Iterable<AssociationViewmodel> associations = topicmap.getAssociations();
 
-	    writer.writeStartDocument();
-	    writer.writeDTD("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 20000802//EN\" " 
+	    String SVGfileName = "ExportedTopicamap-" + topicmapId +".svg";
+	    XMLOutputFactory xof = XMLOutputFactory.newInstance();
+	    XMLStreamWriter svgWriter = null;
+	    svgWriter = xof.createXMLStreamWriter(new FileWriter(SVGfileName));
+
+	    svgWriter.writeStartDocument();
+	    svgWriter.writeDTD("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 20000802//EN\" " 
 			    + "\"http://www.w3.org/TR/2000/CR-SVG-20000802/DTD/svg-20000802.dtd\">");
-	    writer.writeStartElement("svg");
-	    writer.writeAttribute("width", "600");
-	    writer.writeAttribute("height", "600");
+	    svgWriter.writeStartElement("svg");
+	    svgWriter.writeAttribute("width", "1200");
+	    svgWriter.writeAttribute("height", "1200");
+	    svgWriter.writeAttribute("xmlns","http://www.w3.org/2000/svg");
 
             for (TopicViewmodel topic : topics) {
-		value= topic.getSimpleValue();
-		CompositeValueModel viewProps =new CompositeValueModel(topic.view_props);                                     
-		writer.writeEmptyElement("rect");
-		writer.writeAttribute("x", "" + topic.getX());
-		writer.writeAttribute("y", "" + topic.getY());
-		writer.writeAttribute("width", value.length );
-		writer.writeAttribute("height", "20");
-		switch (topic.getTypeUri()){
-		    case "dm4.contacts.institution":		
-			writer.writeAttribute("fill", "red");   
-		    case "dm4.contacts.person":		    
-			writer.writeAttribute("fill", "orange");       
-		    case "dm4.notes.note":		    
-			writer.writeAttribute("fill", "yellow");       
-		    case "dm4.webbrowser.web_resource":
-			writer.writeAttribute("fill", "blue");       
-		  }
+		JSONObject topicSVG =  topic.toJSON();
+		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
+		String value= topicSVG.getString("value");
+		log.info("########## value"+ topic.getSimpleValue());
+		String x = viewProps.getString("dm4.topicmaps.x");
+		String y = viewProps.getString("dm4.topicmaps.y");
+		log.info("########## VIEWPROPS X " + viewProps.getString("dm4.topicmaps.x"));
+		log.info("########## VIEWPROPS Y " + viewProps.getString("dm4.topicmaps.y"));
+		//		String  width = value.length().toString();
+		//		CompositeValueModel viewProps =new CompositeValueModel(topic.viewProps);                                     
+		svgWriter.writeEmptyElement("rect");
+		svgWriter.writeAttribute("x", "" + x);
+		svgWriter.writeAttribute("y", "" + y);
+		svgWriter.writeAttribute("width", "30");
+		svgWriter.writeAttribute("height", "20");
+		String typeUri = topic.getTypeUri();
+		log.info("########## TOPIC "+ typeUri);
+		if (topic.getTypeUri().equals("dm4.contacts.institution")){
+		    svgWriter.writeAttribute("fill", "red");   
+		} else if (topic.getTypeUri().equals("dm4.contacts.person")){
+		    svgWriter.writeAttribute("fill", "blue");       
+		} else if (topic.getTypeUri().equals("dm4.notes.note")){
+		    svgWriter.writeAttribute("fill", "yellow");       
+		} else {
+		    svgWriter.writeAttribute("fill", "lightblue");       
+		}
+
+		svgWriter.writeStartElement("text");
+		svgWriter.writeAttribute("x", x);
+		svgWriter.writeAttribute("y", y);
+		svgWriter.writeCharacters(value);
+		svgWriter.writeEndElement();
 
 	    }
-	    writer.writeEndDocument(); // closes svg element
 
-	    /*	    Topic createdFile = filesService.createFile(in, "/topicmap-" + topicmapId + ".txt");
+	    for (AssociationViewmodel association : associations) {
+	    }
+
+	    svgWriter.writeEndDocument(); // closes svg element
+	    svgWriter.flush();
+	    svgWriter.close();
+	    /*
+    	    Topic createdFile = filesService.createFile(in, "/topicmap-" + topicmapId + ".txt");
 	    return createdFile;
 	    */
+
 	} catch (Exception e) {
 	    throw new RuntimeException("Export failed", e );
 	} 
