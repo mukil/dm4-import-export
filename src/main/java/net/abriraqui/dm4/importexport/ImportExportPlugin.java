@@ -83,7 +83,6 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/export/svg")
-    //    @Produces("image/svg+xml")
     public void exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId)  throws XMLStreamException {
 	try {
 	    log.info("Exporting topicmap #########" + topicmapId);
@@ -107,21 +106,16 @@ public class ImportExportPlugin extends PluginActivator {
             for (TopicViewmodel topic : topics) {
 		JSONObject topicSVG =  topic.toJSON();
 		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
-		String value= topicSVG.getString("value");
-		log.info("########## value"+ topic.getSimpleValue());
+		String value= topic.getSimpleValue().toString();
 		String x = viewProps.getString("dm4.topicmaps.x");
 		String y = viewProps.getString("dm4.topicmaps.y");
-		log.info("########## VIEWPROPS X " + viewProps.getString("dm4.topicmaps.x"));
-		log.info("########## VIEWPROPS Y " + viewProps.getString("dm4.topicmaps.y"));
-		//		String  width = value.length().toString();
-		//		CompositeValueModel viewProps =new CompositeValueModel(topic.viewProps);                                     
+		Integer valueWidth = value.length()*9;
 		svgWriter.writeEmptyElement("rect");
 		svgWriter.writeAttribute("x", "" + x);
 		svgWriter.writeAttribute("y", "" + y);
-		svgWriter.writeAttribute("width", "30");
+		svgWriter.writeAttribute("width", valueWidth.toString());
 		svgWriter.writeAttribute("height", "20");
 		String typeUri = topic.getTypeUri();
-		log.info("########## TOPIC "+ typeUri);
 		if (topic.getTypeUri().equals("dm4.contacts.institution")){
 		    svgWriter.writeAttribute("fill", "red");   
 		} else if (topic.getTypeUri().equals("dm4.contacts.person")){
@@ -131,16 +125,30 @@ public class ImportExportPlugin extends PluginActivator {
 		} else {
 		    svgWriter.writeAttribute("fill", "lightblue");       
 		}
+		Integer yText = Integer.parseInt(y)+14;
+		Integer xText = Integer.parseInt(x)+5;
 
 		svgWriter.writeStartElement("text");
-		svgWriter.writeAttribute("x", x);
-		svgWriter.writeAttribute("y", y);
+		svgWriter.writeAttribute("x", xText.toString());
+		svgWriter.writeAttribute("y", yText.toString());
 		svgWriter.writeCharacters(value);
 		svgWriter.writeEndElement();
 
 	    }
-
+	    
 	    for (AssociationViewmodel association : associations) {
+
+		RoleModel role1 = association.getRoleModel1();
+		role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
+
+		svgWriter.writeEmptyElement("line");
+		svgWriter.writeAttribute("x1", x1);
+		svgWriter.writeAttribute("x2", x1);
+		svgWriter.writeAttribute("y1",  y1);
+		svgWriter.writeAttribute("y2",  y2);
+		svgWriter.writeAttribute("stroke", "lightgray");
+		svgWriter.writeAttribute("stroke-width", "2");
+
 	    }
 
 	    svgWriter.writeEndDocument(); // closes svg element
