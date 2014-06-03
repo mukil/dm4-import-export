@@ -107,40 +107,33 @@ public class ImportExportPlugin extends PluginActivator {
 		JSONObject topicSVG =  topic.toJSON();
 		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
 		String value= topic.getSimpleValue().toString();
-		String x = viewProps.getString("dm4.topicmaps.x");
-		String y = viewProps.getString("dm4.topicmaps.y");
-		Integer valueWidth = value.length()*9;
+		int x = viewProps.getInt("dm4.topicmaps.x");
+		int y = viewProps.getInt("dm4.topicmaps.y");
+		int valueWidth = value.length()*9;
+		boolean visibility = viewProps.getBoolean("dm4.topicmaps.visibility");
+		if (!visibility) { continue ;}
 		svgWriter.writeEmptyElement("rect");
-		svgWriter.writeAttribute("x", "" + x);
-		svgWriter.writeAttribute("y", "" + y);
-		svgWriter.writeAttribute("width", valueWidth.toString());
+		svgWriter.writeAttribute("x", Integer.toString(x));
+		svgWriter.writeAttribute("y", Integer.toString(y));
+		svgWriter.writeAttribute("width", Integer.toString(valueWidth));
 		svgWriter.writeAttribute("height", "20");
-		String typeUri = topic.getTypeUri();
-		if (topic.getTypeUri().equals("dm4.contacts.institution")){
-		    svgWriter.writeAttribute("fill", "red");   
-		} else if (topic.getTypeUri().equals("dm4.contacts.person")){
-		    svgWriter.writeAttribute("fill", "blue");       
-		} else if (topic.getTypeUri().equals("dm4.notes.note")){
-		    svgWriter.writeAttribute("fill", "yellow");       
-		} else {
-		    svgWriter.writeAttribute("fill", "lightblue");       
-		}
-		Integer yText = Integer.parseInt(y)+14;
-		Integer xText = Integer.parseInt(x)+5;
+
+
+		svgWriter.writeAttribute("fill", color(topic.getTypeUri()));   
 
 		svgWriter.writeStartElement("text");
-		svgWriter.writeAttribute("x", xText.toString());
-		svgWriter.writeAttribute("y", yText.toString());
+		svgWriter.writeAttribute("x", Integer.toString(x+5));
+		svgWriter.writeAttribute("y", Integer.toString(y+14));
 		svgWriter.writeCharacters(value);
 		svgWriter.writeEndElement();
 
 	    }
 	    
 	    for (AssociationViewmodel association : associations) {
-
+		
 		RoleModel role1 = association.getRoleModel1();
-		role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
 
+		/*
 		svgWriter.writeEmptyElement("line");
 		svgWriter.writeAttribute("x1", x1);
 		svgWriter.writeAttribute("x2", x1);
@@ -148,7 +141,7 @@ public class ImportExportPlugin extends PluginActivator {
 		svgWriter.writeAttribute("y2",  y2);
 		svgWriter.writeAttribute("stroke", "lightgray");
 		svgWriter.writeAttribute("stroke-width", "2");
-
+		*/
 	    }
 
 	    svgWriter.writeEndDocument(); // closes svg element
@@ -252,5 +245,18 @@ public class ImportExportPlugin extends PluginActivator {
         } else if (service == filesService) {
 	    filesService = null;
         }
+    }
+
+
+    private String color(String typeUri) {
+	if (typeUri.equals("dm4.contacts.institution")) {
+	    return "red";
+	} else if (typeUri.equals("dm4.contacts.person")) {
+	    return "blue";
+	} else if (typeUri.equals("dm4.notes.note")) {
+	    return "yellow";
+	} else {
+	    return "lightblue";
+	}
     }
 }
