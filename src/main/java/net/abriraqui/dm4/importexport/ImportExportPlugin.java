@@ -163,8 +163,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    return newTopic;
 	} catch(Exception e) {
 	    log.warning("Topic not imported!!");
-
-	    //     throw new RuntimeException("Importing topic failed", e);
+	    throw new RuntimeException("Importing topic failed", e);
 	    
 	}
 	
