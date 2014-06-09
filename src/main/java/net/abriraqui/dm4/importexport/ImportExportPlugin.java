@@ -164,9 +164,7 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/import")
     @Consumes("multipart/form-data")
     public Topic importTopicmap(UploadedFile file) {
-
 	try {
-
 	    String json = file.getString();
 
 	    JSONObject topicmap = new JSONObject(json);
@@ -191,7 +189,7 @@ public class ImportExportPlugin extends PluginActivator {
 		CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
 		long origTopicId = model.getId();
 		
-		Topic newTopic =  dms.createTopic(model, null);
+		Topic newTopic = createTopic(model);
 		long topicId = newTopic.getId();
 		
 		mapTopicIds.put(origTopicId, topicId);
@@ -209,17 +207,18 @@ public class ImportExportPlugin extends PluginActivator {
 		RoleModel role2 = assocModel.getRoleModel2();
 		role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
 		
-		Association newAssociation = dms.createAssociation(assocModel, null);
+		Association newAssociation = createAssociation(assocModel);
 		long assocId = newAssociation.getId();
 		topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
 		
 	    }
-	    
-	    return importedTopicmap;
+	    return importedTopicmap;	    
 
-	} catch (Exception e) {
-	    throw new RuntimeException("Import failed", e);
-	} 
+	    	} catch(Exception e) {
+	    throw new RuntimeException("Importing failed", e);
+	}
+	    
+
     }
 
 
@@ -249,6 +248,7 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
 
+
     private String color(String typeUri) {
 	if (typeUri.equals("dm4.contacts.institution")) {
 	    return "red";
@@ -261,3 +261,29 @@ public class ImportExportPlugin extends PluginActivator {
 	}
     }
 }
+
+    private Topic createTopic(TopicModel model) {
+	try {
+	    Topic newTopic =  dms.createTopic(model, null);
+	    return newTopic;
+	} catch(Exception e) {
+	    log.warning("Topic not imported!!");
+
+	    //     throw new RuntimeException("Importing topic failed", e);
+	    
+	}
+	
+    }
+    
+    private Association createAssociation(AssociationModel assocModel) {
+	try {
+	    Association newAssociation = dms.createAssociation(assocModel, null);
+	    return newAssociation;
+	} catch(Exception e) {
+	    log.warning("Association not imported!!");
+	    throw new RuntimeException("Importing association failed", e);
+	}
+    }
+
+}
+
