@@ -105,12 +105,13 @@ public class ImportExportPlugin extends PluginActivator {
 
             for (TopicViewmodel topic : topics) {
 		JSONObject topicSVG =  topic.toJSON();
-		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
+		//		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
+		CompositeValueModel viewProps = topic.getViewProperties();
 		String value= topic.getSimpleValue().toString();
-		int x = viewProps.getInt("dm4.topicmaps.x");
-		int y = viewProps.getInt("dm4.topicmaps.y");
+		int x = viewProps.getX();
+		int y = viewProps.getY();
 		int valueWidth = value.length()*9;
-		boolean visibility = viewProps.getBoolean("dm4.topicmaps.visibility");
+		boolean visibility = viewProps.getVisibility();
 		if (!visibility) { continue ;}
 		svgWriter.writeEmptyElement("rect");
 		svgWriter.writeAttribute("x", Integer.toString(x));
