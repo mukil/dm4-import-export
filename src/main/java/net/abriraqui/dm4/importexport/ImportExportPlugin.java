@@ -105,13 +105,23 @@ public class ImportExportPlugin extends PluginActivator {
 
             for (TopicViewmodel topic : topics) {
 		JSONObject topicSVG =  topic.toJSON();
-		//		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
-		CompositeValueModel viewProps = topic.getViewProperties();
+		
+		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
+		int x = viewProps.getInt("dm4.topicmaps.x");
+		int y = viewProps.getInt("dm4.topicmaps.y");
+		boolean visibility = viewProps.getBoolean("dm4.topicmaps.visibility");
+		String value= topic.getSimpleValue().toString();
+		
+		/*
+		CompositeValueModel viewProps = new CompositeValueModel(topic.getViewProperties());
 		String value= topic.getSimpleValue().toString();
 		int x = viewProps.getX();
 		int y = viewProps.getY();
-		int valueWidth = value.length()*9;
 		boolean visibility = viewProps.getVisibility();
+		*/
+
+		int valueWidth = value.length()*9;
+
 		if (!visibility) { continue ;}
 		svgWriter.writeEmptyElement("rect");
 		svgWriter.writeAttribute("x", Integer.toString(x));
@@ -133,6 +143,13 @@ public class ImportExportPlugin extends PluginActivator {
 	    for (AssociationViewmodel association : associations) {
 		
 		RoleModel role1 = association.getRoleModel1();
+		long topic1_id = role1.getPlayerId();
+		RoleModel role2 = association.getRoleModel2();
+		long topic2_id = role2.getPlayerId();
+		Topic topic1 = topicmap.getTopic(topic1_id);
+		CompositeValueModel topic1_viewProps = new CompositeValueModel(topic1.getViewProperties());     
+		int x1 = topic1_viewProps.getX();
+		int y1 = topic1_viewProps.getY();
 
 		/*
 		svgWriter.writeEmptyElement("line");
@@ -260,16 +277,13 @@ public class ImportExportPlugin extends PluginActivator {
 	    return "lightblue";
 	}
     }
-}
-
     private Topic createTopic(TopicModel model) {
 	try {
 	    Topic newTopic =  dms.createTopic(model, null);
 	    return newTopic;
 	} catch(Exception e) {
 	    log.warning("Topic not imported!!");
-
-	    //     throw new RuntimeException("Importing topic failed", e);
+	    throw new RuntimeException("Importing topic failed", e);
 	    
 	}
 	
