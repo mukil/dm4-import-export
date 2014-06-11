@@ -103,23 +103,32 @@ public class ImportExportPlugin extends PluginActivator {
 	    svgWriter.writeAttribute("height", "1200");
 	    svgWriter.writeAttribute("xmlns","http://www.w3.org/2000/svg");
 
-            for (TopicViewmodel topic : topics) {
-		JSONObject topicSVG =  topic.toJSON();
-		
-		CompositeValueModel viewProps =new CompositeValueModel(topicSVG.getJSONObject("view_props")); 
-		int x = viewProps.getInt("dm4.topicmaps.x");
-		int y = viewProps.getInt("dm4.topicmaps.y");
-		boolean visibility = viewProps.getBoolean("dm4.topicmaps.visibility");
-		String value= topic.getSimpleValue().toString();
-		
-		/*
-		CompositeValueModel viewProps = new CompositeValueModel(topic.getViewProperties());
-		String value= topic.getSimpleValue().toString();
-		int x = viewProps.getX();
-		int y = viewProps.getY();
-		boolean visibility = viewProps.getVisibility();
-		*/
+	    for (AssociationViewmodel association : associations) {
+		long topic1Id = association.getRoleModel1().getPlayerId();
+		long topic2Id = association.getRoleModel2().getPlayerId();
+		TopicViewmodel topic1 = topicmap.getTopic(topic1Id);
+		int x1 = topic1.getX();
+		int y1 = topic1.getY();
 
+		TopicViewmodel topic2 = topicmap.getTopic(topic2Id);
+		int x2 = topic2.getX();
+		int y2 = topic2.getY();
+	
+		svgWriter.writeEmptyElement("line");
+		svgWriter.writeAttribute("x1", Integer.toString(x1));
+		svgWriter.writeAttribute("x2", Integer.toString(x2));
+		svgWriter.writeAttribute("y1",  Integer.toString(y1));
+		svgWriter.writeAttribute("y2",  Integer.toString(y2));
+		svgWriter.writeAttribute("stroke", "lightgray");
+		svgWriter.writeAttribute("stroke-width", "2");
+		
+	    }
+
+            for (TopicViewmodel topic : topics) {
+		String value= topic.getSimpleValue().toString();
+		int x = topic.getX();
+		int y = topic.getY();
+		boolean visibility = topic.getVisibility();
 		int valueWidth = value.length()*9;
 
 		if (!visibility) { continue ;}
@@ -129,7 +138,6 @@ public class ImportExportPlugin extends PluginActivator {
 		svgWriter.writeAttribute("width", Integer.toString(valueWidth));
 		svgWriter.writeAttribute("height", "20");
 
-
 		svgWriter.writeAttribute("fill", color(topic.getTypeUri()));   
 
 		svgWriter.writeStartElement("text");
@@ -137,38 +145,14 @@ public class ImportExportPlugin extends PluginActivator {
 		svgWriter.writeAttribute("y", Integer.toString(y+14));
 		svgWriter.writeCharacters(value);
 		svgWriter.writeEndElement();
-
+		
 	    }
 	    
-	    for (AssociationViewmodel association : associations) {
-		
-		RoleModel role1 = association.getRoleModel1();
-		long topic1_id = role1.getPlayerId();
-		RoleModel role2 = association.getRoleModel2();
-		long topic2_id = role2.getPlayerId();
-		Topic topic1 = topicmap.getTopic(topic1_id);
-		CompositeValueModel topic1_viewProps = new CompositeValueModel(topic1.getViewProperties());     
-		int x1 = topic1_viewProps.getX();
-		int y1 = topic1_viewProps.getY();
-
-		/*
-		svgWriter.writeEmptyElement("line");
-		svgWriter.writeAttribute("x1", x1);
-		svgWriter.writeAttribute("x2", x1);
-		svgWriter.writeAttribute("y1",  y1);
-		svgWriter.writeAttribute("y2",  y2);
-		svgWriter.writeAttribute("stroke", "lightgray");
-		svgWriter.writeAttribute("stroke-width", "2");
-		*/
-	    }
+	
 
 	    svgWriter.writeEndDocument(); // closes svg element
 	    svgWriter.flush();
 	    svgWriter.close();
-	    /*
-    	    Topic createdFile = filesService.createFile(in, "/topicmap-" + topicmapId + ".txt");
-	    return createdFile;
-	    */
 
 	} catch (Exception e) {
 	    throw new RuntimeException("Export failed", e );
@@ -242,11 +226,7 @@ public class ImportExportPlugin extends PluginActivator {
     // Hook implementation //
     
     @Override
-    @ConsumesService({
-	    "de.deepamehta.plugins.topicmaps.service.TopicmapsService",
-	    "de.deepamehta.plugins.files.service.FilesService"      
-    })
-
+    @ConsumesService({TopicmapsService.class, FilesService.class })
     public void serviceArrived(PluginService service) {
 	if (service instanceof TopicmapsService) {
             topicmapsService = (TopicmapsService) service;
