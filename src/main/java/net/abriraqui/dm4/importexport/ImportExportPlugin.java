@@ -131,11 +131,7 @@ public class ImportExportPlugin extends PluginActivator {
     // Hook implementation //
     
     @Override
-    @ConsumesService({
-	    "de.deepamehta.plugins.topicmaps.service.TopicmapsService",
-	    "de.deepamehta.plugins.files.service.FilesService"      
-    })
-
+    @ConsumesService({TopicmapsService.class, FilesService.class })
     public void serviceArrived(PluginService service) {
 	if (service instanceof TopicmapsService) {
             topicmapsService = (TopicmapsService) service;
