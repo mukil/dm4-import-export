@@ -6,6 +6,8 @@ import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.annotation.ConsumesService;
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.TopicType;
+import de.deepamehta.core.ViewConfiguration;
 import de.deepamehta.core.Association;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.CompositeValueModel;
@@ -103,6 +105,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    svgWriter.writeAttribute("width", "1200");
 	    svgWriter.writeAttribute("height", "1200");
 	    svgWriter.writeAttribute("xmlns","http://www.w3.org/2000/svg");
+	    svgWriter.writeAttribute("xmlns:xlink","http://www.w3.org/1999/xlink");
 
 	    for (AssociationViewmodel association : associations) {
 		long topic1Id = association.getRoleModel1().getPlayerId();
@@ -130,27 +133,34 @@ public class ImportExportPlugin extends PluginActivator {
 		int x = topic.getX();
 		int y = topic.getY();
 		boolean visibility = topic.getVisibility();
-		int valueWidth = value.length()*9;
+		int boxWidth = value.length() * 9;
+		int boxHeight = 20;
+		int marginLeft = 5;
+		int marginTop = 14;
+		icon(topic.getTypeUri());
 
 		if (!visibility) { continue ;}
 		svgWriter.writeEmptyElement("rect");
-		svgWriter.writeAttribute("x", Integer.toString(x));
-		svgWriter.writeAttribute("y", Integer.toString(y));
-		svgWriter.writeAttribute("width", Integer.toString(valueWidth));
-		svgWriter.writeAttribute("height", "20");
-
+		svgWriter.writeAttribute("x", Integer.toString(x - boxWidth / 2));
+		svgWriter.writeAttribute("y", Integer.toString(y - boxHeight / 2));
+		svgWriter.writeAttribute("width", Integer.toString(boxWidth));
+		svgWriter.writeAttribute("height", Integer.toString(boxHeight));
 		svgWriter.writeAttribute("fill", color(topic.getTypeUri()));   
 
 		svgWriter.writeStartElement("text");
-		svgWriter.writeAttribute("x", Integer.toString(x+5));
-		svgWriter.writeAttribute("y", Integer.toString(y+14));
+		svgWriter.writeAttribute("x", Integer.toString(x - boxWidth / 2 + marginLeft));
+		svgWriter.writeAttribute("y", Integer.toString(y - boxHeight / 2 + marginTop));
 		svgWriter.writeCharacters(value);
 		svgWriter.writeEndElement();
-		
+
+		svgWriter.writeEmptyElement("image");
+		svgWriter.writeAttribute("x", Integer.toString(x + boxWidth / 2));
+		svgWriter.writeAttribute("y", Integer.toString(y));
+		svgWriter.writeAttribute("width", "16");
+		svgWriter.writeAttribute("height", "16");
+		svgWriter.writeAttribute("xlink:href",icon(topic.getTypeUri()));
 	    }
 	    
-	
-
 	    svgWriter.writeEndDocument(); // closes svg element
 	    svgWriter.flush();
 	    svgWriter.close();
@@ -254,14 +264,13 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private String icon(String typeUri) {
-	TopicType topicType = dms.getTypeUri(typeUri);
-	ViewConfiguration viewConfig = topicType.getViewConfig();
-	for (Topic topicConf: viewConfig.getConfigTopics()){
-	    if (topicConf.getTypeUri().equals("dm4.webclient.icon")){
-		String path = topicConf.getSimpleValue().toString();
-	    }
+	TopicType topicType = dms.getTopicType(typeUri);
+	String iconPath = (String) topicType.getViewConfig("dm4.webclient.view_config","dm4.webclient.icon");
+	if (iconPath == null) {
+	    iconPath = "/de.deepamehta.webclient/images/ball-gray.png";
+		//	    throw new RuntimeException("No icon configured for type " + typeUri);
 	}
-	return path;
+	return System.getProperty("dm4.host.url") + iconPath.substring(1);
     }
 
 
