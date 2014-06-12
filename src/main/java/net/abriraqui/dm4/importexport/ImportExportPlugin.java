@@ -43,6 +43,7 @@ import java.util.ArrayList;
 
 import org.codehaus.jettison.json.JSONObject;
 import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
 
 import javax.ws.rs.POST;
 
@@ -181,46 +182,41 @@ public class ImportExportPlugin extends PluginActivator {
 	    log.info("###### importedTopicapId " + topicmapId);
 
 	    Map<Long, Long> mapTopicIds = new HashMap();
+	    importTopics(topicsArray, mapTopicIds, topicmapId);
+	    importAssociations(assocsArray,mapTopicIds, topicmapId);
+	    return importedTopicmap;	    
+	} catch (Exception e) {
+	    throw new RuntimeException("Importing failed", e);
+	}
+    }
+
 	    
 	    // Import topics
 	    
-	    for (int i = 0, size = topicsArray.length(); i < size; i++)	{
+    private void importTopics(JSONArray topicsArray, Map<Long, Long> mapTopicIds, long topicmapId) {
+	for (int i = 0, size = topicsArray.length(); i < size; i++)	{
+	    try {
 		JSONObject topic =  topicsArray.getJSONObject(i);
-		TopicModel model = new TopicModel(topic);
-		CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
-		long origTopicId = model.getId();
-		
-		Topic newTopic = createTopic(model);
-		long topicId = newTopic.getId();
-		
-		mapTopicIds.put(origTopicId, topicId);
-		topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
-		    
+		createTopic(topic, mapTopicIds, topicmapId);
+	    } catch (Exception e){
+		log.warning("Topic not imported!!" + e);
 	    }
-		
-	    // Import associations
-	    
-	    for (int i=0, size = assocsArray.length(); i< size; i++) {		    
-
-		AssociationModel assocModel = new AssociationModel(assocsArray.getJSONObject(i));
-		RoleModel role1 = assocModel.getRoleModel1();
-		role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
-		RoleModel role2 = assocModel.getRoleModel2();
-		role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
-		
-		Association newAssociation = createAssociation(assocModel);
-		long assocId = newAssociation.getId();
-		topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
-		
-	    }
-	    return importedTopicmap;	    
-
-	    	} catch(Exception e) {
-	    throw new RuntimeException("Importing failed", e);
 	}
-	    
-
     }
+	    // Import associations
+
+    private void importAssociations(JSONArray assocsArray, Map<Long, Long> mapTopicIds, long topicmapId) {
+	for (int i=0, size = assocsArray.length(); i< size; i++) {		    
+	    try {
+		JSONObject association = assocsArray.getJSONObject(i);
+		createAssociation(association, mapTopicIds, topicmapId);
+	    } catch (Exception e) {
+		log.warning("Association not imported");
+	    }
+	}
+    }
+    
+
 
 
     // Hook implementation //
@@ -245,7 +241,6 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
 
-
     private String color(String typeUri) {
 	if (typeUri.equals("dm4.contacts.institution")) {
 	    return "red";
@@ -257,26 +252,29 @@ public class ImportExportPlugin extends PluginActivator {
 	    return "lightblue";
 	}
     }
-    private Topic createTopic(TopicModel model) {
-	try {
-	    Topic newTopic =  dms.createTopic(model, null);
-	    return newTopic;
-	} catch(Exception e) {
-	    log.warning("Topic not imported!!");
-	    throw new RuntimeException("Importing topic failed", e);
-	    
-	}
+
+    private void createTopic(JSONObject topic, Map<Long, Long> mapTopicIds, long topicmapId) throws JSONException {
+	TopicModel model = new TopicModel(topic);
+	CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
+	long origTopicId = model.getId();
 	
+	Topic newTopic = dms.createTopic(model, null);
+	long topicId = newTopic.getId();
+	
+	mapTopicIds.put(origTopicId, topicId);
+	topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
     }
     
-    private Association createAssociation(AssociationModel assocModel) {
-	try {
-	    Association newAssociation = dms.createAssociation(assocModel, null);
-	    return newAssociation;
-	} catch(Exception e) {
-	    log.warning("Association not imported!!");
-	    throw new RuntimeException("Importing association failed", e);
-	}
+    private void createAssociation(JSONObject association, Map<Long, Long> mapTopicIds, long topicmapId) {
+	AssociationModel assocModel = new AssociationModel(association);		
+	RoleModel role1 = assocModel.getRoleModel1();
+	role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
+	RoleModel role2 = assocModel.getRoleModel2();
+	role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
+	Association newAssociation = dms.createAssociation(assocModel, null);
+	long assocId = newAssociation.getId();
+	topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
+	
     }
 
 }
