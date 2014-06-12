@@ -253,6 +253,18 @@ public class ImportExportPlugin extends PluginActivator {
 	}
     }
 
+    private String icon(String typeUri) {
+	TopicType topicType = dms.getTypeUri(typeUri);
+	ViewConfiguration viewConfig = topicType.getViewConfig();
+	for (Topic topicConf: viewConfig.getConfigTopics()){
+	    if (topicConf.getTypeUri().equals("dm4.webclient.icon")){
+		String path = topicConf.getSimpleValue().toString();
+	    }
+	}
+	return path;
+    }
+
+
     private void createTopic(JSONObject topic, Map<Long, Long> mapTopicIds, long topicmapId) throws JSONException {
 	TopicModel model = new TopicModel(topic);
 	CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
