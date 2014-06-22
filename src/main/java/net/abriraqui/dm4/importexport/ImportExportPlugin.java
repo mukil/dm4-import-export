@@ -117,6 +117,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    svgWriter.writeAttribute("xmlns:xlink","http://www.w3.org/1999/xlink");
 
 	    for (AssociationViewmodel association : associations) {
+		String valueAssoc= association.getSimpleValue().toString();
 		long topic1Id = association.getRoleModel1().getPlayerId();
 		long topic2Id = association.getRoleModel2().getPlayerId();
 		TopicViewmodel topic1 = topicmap.getTopic(topic1Id);
@@ -134,7 +135,26 @@ public class ImportExportPlugin extends PluginActivator {
 		svgWriter.writeAttribute("y2",  Integer.toString(y2));
 		svgWriter.writeAttribute("stroke", "lightgray");
 		svgWriter.writeAttribute("stroke-width", "3");
-		
+
+
+		int dx = x2-x1;
+		int dy = y2-y1;
+		double assocLine = Math.sqrt(Math.pow(dx,2)+Math.pow(dy,2));
+		double alpha = Math.asin(dy/assocLine);
+
+
+		svgWriter.writeStartElement("g");
+		svgWriter.writeAttribute("transform", "translate("+ Integer.toString(x1) + "," + Integer.toString(y1)+")");
+		svgWriter.writeStartElement("text");
+		svgWriter.writeAttribute("x", Integer.toString((x2-x1)/2));
+		svgWriter.writeAttribute("y", Integer.toString((y2-y1)/2));
+		svgWriter.writeAttribute("transform","rotate(" + Double.toString(alpha) +")");
+
+		svgWriter.writeAttribute("font-size", "0.7em");
+		svgWriter.writeCharacters(valueAssoc);
+		svgWriter.writeEndElement();
+		svgWriter.writeEndElement();
+
 	    }
 
             for (TopicViewmodel topic : topics) {
@@ -159,6 +179,7 @@ public class ImportExportPlugin extends PluginActivator {
 		svgWriter.writeStartElement("text");
 		svgWriter.writeAttribute("x", Integer.toString(x - boxWidth / 2 + marginLeft));
 		svgWriter.writeAttribute("y", Integer.toString(y - boxHeight / 2 + marginTop));
+		svgWriter.writeAttribute("font-size", "0.9em");
 		svgWriter.writeCharacters(value);
 		svgWriter.writeEndElement();
 
