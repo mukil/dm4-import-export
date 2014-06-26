@@ -97,24 +97,19 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/export/svg")
     public void exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId)  throws XMLStreamException {
 	try {
+	    final int BOX_HEIGHT = 20;
+	    final int MARGIN_LEFT = 5;
+	    final int MARGIN_TOP = 14;
+	    final int ICON_WIDTH = 16;
+	    final int ICON_HEIGHT = 16;
+
 	    log.info("Exporting topicmap #########" + topicmapId);
 	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
 	    Iterable<TopicViewmodel> topics =topicmap.getTopics();
             Iterable<AssociationViewmodel> associations = topicmap.getAssociations();
 
 	    String SVGfileName = "ExportedTopicamap-" + topicmapId +".svg";
-	    XMLOutputFactory xof = XMLOutputFactory.newInstance();
-	    XMLStreamWriter svgWriter = null;
-	    svgWriter = xof.createXMLStreamWriter(new FileWriter(SVGfileName));
-
-	    svgWriter.writeStartDocument();
-	    svgWriter.writeDTD("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 20000802//EN\" " 
-			    + "\"http://www.w3.org/TR/2000/CR-SVG-20000802/DTD/svg-20000802.dtd\">");
-	    svgWriter.writeStartElement("svg");
-	    svgWriter.writeAttribute("width", "1200");
-	    svgWriter.writeAttribute("height", "1200");
-	    svgWriter.writeAttribute("xmlns","http://www.w3.org/2000/svg");
-	    svgWriter.writeAttribute("xmlns:xlink","http://www.w3.org/1999/xlink");
+	    SVGRenderer svg = new SVGRenderer(SVGfileName);
 
 	    for (AssociationViewmodel association : associations) {
 		String valueAssoc= association.getSimpleValue().toString();
@@ -127,7 +122,14 @@ public class ImportExportPlugin extends PluginActivator {
 		TopicViewmodel topic2 = topicmap.getTopic(topic2Id);
 		int x2 = topic2.getX();
 		int y2 = topic2.getY();
-	
+
+		int x = x2-x1/2;
+		int y = y2-y1/2;
+
+		svg.line(x1, x2, y1, y2);
+		svg.text(x, y, valueAssoc);
+
+		/*	
 		svgWriter.writeEmptyElement("line");
 		svgWriter.writeAttribute("x1", Integer.toString(x1));
 		svgWriter.writeAttribute("x2", Integer.toString(x2));
@@ -136,26 +138,30 @@ public class ImportExportPlugin extends PluginActivator {
 		svgWriter.writeAttribute("stroke", "lightgray");
 		svgWriter.writeAttribute("stroke-width", "3");
 
-
 		int dx = x2-x1;
 		int dy = y2-y1;
+
 		double assocLine = Math.sqrt(Math.pow(dx,2)+Math.pow(dy,2));
 		double alpha = Math.asin(dy/assocLine);
-
-
+		log.info("#### LENGTH ASSOCLINE" + assocLine);
+		
 		svgWriter.writeStartElement("g");
 		svgWriter.writeAttribute("transform", "translate("+ Integer.toString(x1) + "," + Integer.toString(y1)+")");
+		svgWriter.writeStartElement("g");
+		svgWriter.writeAttribute("transform","rotate(" + Double.toString(alpha) +")");
 		svgWriter.writeStartElement("text");
 		svgWriter.writeAttribute("x", Integer.toString((x2-x1)/2));
 		svgWriter.writeAttribute("y", Integer.toString((y2-y1)/2));
-		svgWriter.writeAttribute("transform","rotate(" + Double.toString(alpha) +")");
+		//		svgWriter.writeAttribute("transform","rotate(" + Double.toString(alpha) +")");
 
 		svgWriter.writeAttribute("font-size", "0.7em");
 		svgWriter.writeCharacters(valueAssoc);
 		svgWriter.writeEndElement();
 		svgWriter.writeEndElement();
-
+		svgWriter.writeEndElement();
+		*/
 	    }
+
 
             for (TopicViewmodel topic : topics) {
 		String value= topic.getSimpleValue().toString();
@@ -163,38 +169,15 @@ public class ImportExportPlugin extends PluginActivator {
 		int y = topic.getY();
 		boolean visibility = topic.getVisibility();
 		int boxWidth = value.length() * 9;
-		int boxHeight = 20;
-		int marginLeft = 5;
-		int marginTop = 14;
-		icon(topic.getTypeUri());
 
 		if (!visibility) { continue ;}
-		svgWriter.writeEmptyElement("rect");
-		svgWriter.writeAttribute("x", Integer.toString(x - boxWidth / 2));
-		svgWriter.writeAttribute("y", Integer.toString(y - boxHeight / 2));
-		svgWriter.writeAttribute("width", Integer.toString(boxWidth));
-		svgWriter.writeAttribute("height", Integer.toString(boxHeight));
-		svgWriter.writeAttribute("fill", color(topic.getTypeUri()));   
-
-		svgWriter.writeStartElement("text");
-		svgWriter.writeAttribute("x", Integer.toString(x - boxWidth / 2 + marginLeft));
-		svgWriter.writeAttribute("y", Integer.toString(y - boxHeight / 2 + marginTop));
-		svgWriter.writeAttribute("font-size", "0.9em");
-		svgWriter.writeCharacters(value);
-		svgWriter.writeEndElement();
-
-		svgWriter.writeEmptyElement("image");
-		svgWriter.writeAttribute("x", Integer.toString(x + boxWidth / 2));
-		svgWriter.writeAttribute("y", Integer.toString(y));
-		svgWriter.writeAttribute("width", "16");
-		svgWriter.writeAttribute("height", "16");
-		svgWriter.writeAttribute("xlink:href", "data:image/png;base64," + icon(topic.getTypeUri()));
-
+		svg.rectangle(x - boxWidth / 2, y - BOX_HEIGHT / 2, boxWidth, BOX_HEIGHT, color(topic.getTypeUri()));
+		svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value);
+		svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
 	    }
 	    
-	    svgWriter.writeEndDocument(); // closes svg element
-	    svgWriter.flush();
-	    svgWriter.close();
+
+	    svg.closeDocument();
 
 	} catch (Exception e) {
 	    throw new RuntimeException("Export failed", e );
@@ -295,7 +278,7 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
 
-    private String icon(String typeUri) throws IOException {
+    private String typeIconDataUri(String typeUri) throws IOException {
 	TopicType topicType = dms.getTopicType(typeUri);
 	String iconPath = (String) topicType.getViewConfig("dm4.webclient.view_config","dm4.webclient.icon");
 	int sep = iconPath.indexOf("/", 2);
@@ -321,7 +304,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    iconPath = "/de.deepamehta.webclient/images/ball-gray.png";
 	}
 
-	return imgBase64Str;
+	return "data:image/png;base64," + imgBase64Str;
 		 
    }
 
