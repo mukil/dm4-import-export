@@ -58,16 +58,18 @@ class SVGRenderer {
 
     }
 
-    public void text(int x, int y, String value) throws XMLStreamException {
+     public void text(int x, int y, int x1, int y1, String value, double alpha) throws XMLStreamException {
 
-	svgWriter.writeStartElement("text");
-	svgWriter.writeAttribute("x", Integer.toString(x));
-	svgWriter.writeAttribute("y", Integer.toString(y));
-	svgWriter.writeAttribute("font-size", "0.8em");
-	svgWriter.writeCharacters(value);
-	svgWriter.writeEndElement();
+	 svgWriter.writeStartElement("text");
+	 svgWriter.writeAttribute("x", Integer.toString(x));
+	 svgWriter.writeAttribute("y", Integer.toString(y));
+	 svgWriter.writeAttribute("font-size", "0.8em");
+	 svgWriter.writeAttribute("transform","translate(" + x1 + "," + y1 +")" + " " + "rotate(" + Double.toString(alpha) + "," + x + "," + y  + ")");
+	 svgWriter.writeCharacters(value);
+	 svgWriter.writeEndElement();
+     }
 
-    }
+
 
     public void image(int x, int y, int imgWidth, int imgHeight, String imgUri) throws XMLStreamException {
 

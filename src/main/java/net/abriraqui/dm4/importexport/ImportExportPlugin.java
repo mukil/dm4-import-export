@@ -123,43 +123,19 @@ public class ImportExportPlugin extends PluginActivator {
 		int x2 = topic2.getX();
 		int y2 = topic2.getY();
 
-		int x = x2-x1/2;
-		int y = y2-y1/2;
-
-		svg.line(x1, x2, y1, y2);
-		svg.text(x, y, valueAssoc);
-
-		/*	
-		svgWriter.writeEmptyElement("line");
-		svgWriter.writeAttribute("x1", Integer.toString(x1));
-		svgWriter.writeAttribute("x2", Integer.toString(x2));
-		svgWriter.writeAttribute("y1",  Integer.toString(y1));
-		svgWriter.writeAttribute("y2",  Integer.toString(y2));
-		svgWriter.writeAttribute("stroke", "lightgray");
-		svgWriter.writeAttribute("stroke-width", "3");
-
 		int dx = x2-x1;
 		int dy = y2-y1;
-
+		int label_x = dx/2;
+		int label_y = dy/2;
 		double assocLine = Math.sqrt(Math.pow(dx,2)+Math.pow(dy,2));
-		double alpha = Math.asin(dy/assocLine);
-		log.info("#### LENGTH ASSOCLINE" + assocLine);
+		double alpha = Math.asin(dy/assocLine)*180/Math.PI;
+		if (dx < 0) {
+                    alpha = -alpha;
+		    }
 		
-		svgWriter.writeStartElement("g");
-		svgWriter.writeAttribute("transform", "translate("+ Integer.toString(x1) + "," + Integer.toString(y1)+")");
-		svgWriter.writeStartElement("g");
-		svgWriter.writeAttribute("transform","rotate(" + Double.toString(alpha) +")");
-		svgWriter.writeStartElement("text");
-		svgWriter.writeAttribute("x", Integer.toString((x2-x1)/2));
-		svgWriter.writeAttribute("y", Integer.toString((y2-y1)/2));
-		//		svgWriter.writeAttribute("transform","rotate(" + Double.toString(alpha) +")");
+		svg.line(x1, x2, y1, y2);
+		svg.text(label_x, label_y,x1+10,y1+10, valueAssoc, alpha);
 
-		svgWriter.writeAttribute("font-size", "0.7em");
-		svgWriter.writeCharacters(valueAssoc);
-		svgWriter.writeEndElement();
-		svgWriter.writeEndElement();
-		svgWriter.writeEndElement();
-		*/
 	    }
 
 
@@ -172,7 +148,8 @@ public class ImportExportPlugin extends PluginActivator {
 
 		if (!visibility) { continue ;}
 		svg.rectangle(x - boxWidth / 2, y - BOX_HEIGHT / 2, boxWidth, BOX_HEIGHT, color(topic.getTypeUri()));
-		svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value);
+		svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, 0, 0, value,0);
+		//		svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value);
 		svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
 	    }
 	    
