@@ -58,6 +58,11 @@ class SVGRenderer {
 
     }
 
+     public void text(int x, int y, String value) throws XMLStreamException {
+	 text(x, y, 0, 0, value, 0);
+     }
+
+
      public void text(int x, int y, int x1, int y1, String value, double alpha) throws XMLStreamException {
 
 	 svgWriter.writeStartElement("text");
