@@ -134,7 +134,7 @@ public class ImportExportPlugin extends PluginActivator {
 		    }
 		
 		svg.line(x1, x2, y1, y2);
-		svg.text(label_x, label_y,x1+10,y1+10, valueAssoc, alpha);
+		svg.text(label_x, label_y,x1+10,y1+10, valueAssoc, "grey", alpha);
 
 	    }
 
@@ -148,7 +148,7 @@ public class ImportExportPlugin extends PluginActivator {
 
 		if (!visibility) { continue ;}
 		svg.rectangle(x - boxWidth / 2, y - BOX_HEIGHT / 2, boxWidth, BOX_HEIGHT, color(topic.getTypeUri()));
-		svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value);
+		svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value, "black");
 		svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
 	    }
 	    
