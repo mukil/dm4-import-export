@@ -28,7 +28,7 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 
 	function export_topicmap_toSVG(){
 	   var export_file = dm4c.restc.request("POST", "/import-export/export/svg")
-	    alert("Exporting to SVG")
+	    alert("Topicmap exported to SVG")
 	}
 
 
