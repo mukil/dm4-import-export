@@ -25,7 +25,7 @@ Usage
 -----
 In the Topicmap dropdown menu:
 
-Select "Export Topicmap to JSON" if you want to move your data to have them in JSON format or move them to another DM instance
+Select "Export Topicmap to JSON" if you want your data in JSON format or move them to another DM instance
 
 Select "Export Topicmap to SVG" if you want to save the current Topicmap as an image in SVG format
 
