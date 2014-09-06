@@ -5,7 +5,7 @@ import de.deepamehta.core.util.JavaUtils;
 import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.Plugin;
-import de.deepamehta.core.service.annotation.ConsumesService;
+import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.Topic;
 import de.deepamehta.core.TopicType;
 import de.deepamehta.core.ViewConfiguration;
@@ -67,7 +67,8 @@ import com.sun.jersey.core.util.Base64;
 @Path("/import-export")
 @Produces("application/json")
 public class ImportExportPlugin extends PluginActivator {
-    
+
+    @Inject    
     private TopicmapsService topicmapsService;
     private FilesService filesService;
 
@@ -218,7 +219,7 @@ public class ImportExportPlugin extends PluginActivator {
     
 
 
-
+    /*
     // Hook implementation //
     
     @Override
@@ -239,7 +240,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    filesService = null;
         }
     }
-
+    */
     
     private String color(String typeUri) {
 	if (typeUri.equals("dm4.contacts.institution")) {
@@ -262,7 +263,10 @@ public class ImportExportPlugin extends PluginActivator {
 	Plugin plugin = dms.getPlugin(pluginPath);
 	String imagePath = "web"+iconPath.substring(sep);
 	
-	InputStream iconIS = plugin.getResourceAsStream(imagePath);
+    //	InputStream iconIS = plugin.getResourceAsStream(imagePath);
+	InputStream iconIS = getStaticResource(imagePath);
+	log.info("##### IconIS " + iconIS);
+
 	ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	byte [] buffer = new byte[1024];
 	int count = 0;
@@ -290,7 +294,8 @@ public class ImportExportPlugin extends PluginActivator {
 	CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
 	long origTopicId = model.getId();
 	
-	Topic newTopic = dms.createTopic(model, null);
+    Topic newTopic = dms.createTopic(model, null);
+
 	long topicId = newTopic.getId();
 	
 	mapTopicIds.put(origTopicId, topicId);
@@ -303,7 +308,8 @@ public class ImportExportPlugin extends PluginActivator {
 	role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
 	RoleModel role2 = assocModel.getRoleModel2();
 	role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
-	Association newAssociation = dms.createAssociation(assocModel, null);
+    Association newAssociation = dms.createAssociation(assocModel, null);
+	
 	long assocId = newAssociation.getId();
 	topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
 	
