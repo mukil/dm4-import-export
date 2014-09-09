@@ -177,7 +177,7 @@ public class ImportExportPlugin extends PluginActivator {
 	    JSONArray topicsArray = topicmap.getJSONArray("topics");
 	  
 	    String origTopicmapName = info.getString("value");
-	    Topic importedTopicmap = topicmapsService.createTopicmap("Imported Topicmap: "+ origTopicmapName,"dm4.webclient.default_topicmap_renderer", null);
+	    Topic importedTopicmap = topicmapsService.createTopicmap("Imported Topicmap: "+ origTopicmapName,"dm4.webclient.default_topicmap_renderer");
 
 	    long topicmapId = importedTopicmap.getId();
 	    log.info("###### importedTopicapId " + topicmapId);
