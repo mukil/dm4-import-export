@@ -217,30 +217,6 @@ public class ImportExportPlugin extends PluginActivator {
 	}
     }
     
-
-
-    /*
-    // Hook implementation //
-    
-    @Override
-    @ConsumesService({TopicmapsService.class, FilesService.class })
-    public void serviceArrived(PluginService service) {
-	if (service instanceof TopicmapsService) {
-            topicmapsService = (TopicmapsService) service;
-        } else if (service instanceof FilesService) {
-            filesService = (FilesService) service;
-        }
-    }
-   
-    @Override
-    public void serviceGone(PluginService service) {
-	if (service == topicmapsService) {
-	    topicmapsService = null;
-        } else if (service == filesService) {
-	    filesService = null;
-        }
-    }
-    */
     
     private String color(String typeUri) {
 	if (typeUri.equals("dm4.contacts.institution")) {
@@ -263,7 +239,7 @@ public class ImportExportPlugin extends PluginActivator {
 	Plugin plugin = dms.getPlugin(pluginPath);
 	String imagePath = "web"+iconPath.substring(sep);
 	
-    //	InputStream iconIS = plugin.getResourceAsStream(imagePath);
+
 	InputStream iconIS = getStaticResource(imagePath);
 	log.info("##### IconIS " + iconIS);
 
