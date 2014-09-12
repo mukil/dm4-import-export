@@ -6,6 +6,8 @@ import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.core.service.PluginService;
 import de.deepamehta.core.service.Plugin;
 import de.deepamehta.core.service.Inject;
+import de.deepamehta.core.service.Transactional;
+
 import de.deepamehta.core.Topic;
 import de.deepamehta.core.TopicType;
 import de.deepamehta.core.ViewConfiguration;
@@ -70,6 +72,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     @Inject    
     private TopicmapsService topicmapsService;
+    @Inject
     private FilesService filesService;
 
     private Logger log = Logger.getLogger(getClass().getName());
@@ -77,6 +80,7 @@ public class ImportExportPlugin extends PluginActivator {
     // Service implementation //
 
     @POST
+    @Transactional
     @Path("/export/json")
     public Topic exportTopicmapToJSON(@CookieParam("dm4_topicmap_id") long topicmapId) {
 
