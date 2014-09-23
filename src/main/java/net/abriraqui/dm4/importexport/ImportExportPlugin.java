@@ -74,63 +74,65 @@ public class ImportExportPlugin extends PluginActivator {
     @POST
     @Path("/export/svg")
     public void exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId)  throws XMLStreamException {
-	try {
-	    final int BOX_HEIGHT = 20;
-	    final int MARGIN_LEFT = 5;
-	    final int MARGIN_TOP = 14;
-	    final int ICON_WIDTH = 16;
-	    final int ICON_HEIGHT = 16;
-
-	    log.info("Exporting Topicmaps #########" + topicmapId);
-	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
-	    Iterable<TopicViewmodel> topics =topicmap.getTopics();
+        final int BOX_HEIGHT = 20;
+        final int MARGIN_LEFT = 5;
+        final int MARGIN_TOP = 14;
+        final int ICON_WIDTH = 16;
+        final int ICON_HEIGHT = 16;
+        try {
+            log.info("Exporting Topicmaps #########" + topicmapId);
+            // 0) Fetch topicmap data
+            TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
+            Iterable<TopicViewmodel> topics = topicmap.getTopics();
             Iterable<AssociationViewmodel> associations = topicmap.getAssociations();
-
-	    String SVGfileName = "Exported Topicmap " + topicmapId +".svg";
-	    SVGRenderer svg = new SVGRenderer(SVGfileName);
-
-	    for (AssociationViewmodel association : associations) {
-		String valueAssoc= association.getSimpleValue().toString();
-		long topic1Id = association.getRoleModel1().getPlayerId();
-		long topic2Id = association.getRoleModel2().getPlayerId();
-		TopicViewmodel topic1 = topicmap.getTopic(topic1Id);
-		int x1 = topic1.getX();
-		int y1 = topic1.getY();
-		TopicViewmodel topic2 = topicmap.getTopic(topic2Id);
-		int x2 = topic2.getX();
-		int y2 = topic2.getY();
+            // 1) Setup default file name of SVG to write to
+            String svgFileName = "Exported Topicmap " + topicmapId +".svg";
+            // 2) Get DM4 filerepo configuration setting and write to its root (if present)
+            String documentPath = findExportDirectoryPath() + svgFileName;
+            // 3) Create SVGWriter
+            SVGRenderer svg = new SVGRenderer(documentPath);
+            // 4) Create all associations
+            for (AssociationViewmodel association : associations) {
+                String valueAssoc= association.getSimpleValue().toString();
+                long topic1Id = association.getRoleModel1().getPlayerId();
+                long topic2Id = association.getRoleModel2().getPlayerId();
+                TopicViewmodel topic1 = topicmap.getTopic(topic1Id);
+                int x1 = topic1.getX();
+                int y1 = topic1.getY();
+                TopicViewmodel topic2 = topicmap.getTopic(topic2Id);
+                int x2 = topic2.getX();
+                int y2 = topic2.getY();
                 // 
-		int dx = x2-x1;
-		int dy = y2-y1;
-		int label_x = dx/2;
-		int label_y = dy/2;
-		double assocLine = Math.sqrt(Math.pow(dx,2)+Math.pow(dy,2));
-		double alpha = Math.asin(dy/assocLine)*180/Math.PI;
-		if (dx < 0) {
+                int dx = x2-x1;
+                int dy = y2-y1;
+                int label_x = dx/2;
+                int label_y = dy/2;
+                double assocLine = Math.sqrt(Math.pow(dx,2)+Math.pow(dy,2));
+                double alpha = Math.asin(dy/assocLine)*180/Math.PI;
+                if (dx < 0) {
                     alpha = -alpha;
                 }
-		svg.line(x1, x2, y1, y2);
-		svg.text(label_x, label_y,x1+10,y1+10, valueAssoc, "grey", alpha);
-	    }
-
+                svg.line(x1, x2, y1, y2);
+                svg.text(label_x, label_y,x1+10,y1+10, valueAssoc, "grey", alpha);
+            }
+            // 5) Create all topics
             for (TopicViewmodel topic : topics) {
-		String value= topic.getSimpleValue().toString();
-		int x = topic.getX();
-		int y = topic.getY();
-		boolean visibility = topic.getVisibility();
-		int boxWidth = value.length() * 9;
-		if (!visibility) { continue ;}
-		svg.rectangle(x - boxWidth / 2, y - BOX_HEIGHT / 2, boxWidth, BOX_HEIGHT, color(topic.getTypeUri()));
-		svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value, "black");
-		svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
-	    }
-            
-	    svg.closeDocument();
-            
-	} catch (Exception e) {
-	    throw new RuntimeException("Export failed", e );
-	} 
-    }
+                String value= topic.getSimpleValue().toString();
+                int x = topic.getX();
+                int y = topic.getY();
+                boolean visibility = topic.getVisibility();
+                int boxWidth = value.length() * 9;
+                if (!visibility) { continue ;}
+                svg.rectangle(x - boxWidth / 2, y - BOX_HEIGHT / 2, boxWidth, BOX_HEIGHT, color(topic.getTypeUri()));
+                svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value, "black");
+                svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
+            }
+            // 6) Close SVGWriter
+            svg.closeDocument();
+        } catch (Exception e) {
+            throw new RuntimeException("Export Topicmap to SVG failed", e );
+        }
+    }   
 
     @POST
     @Path("/import")
@@ -244,6 +246,22 @@ public class ImportExportPlugin extends PluginActivator {
         Association newAssociation = dms.createAssociation(assocModel);
 	long assocId = newAssociation.getId();
 	topicmapsService.addAssociationToTopicmap(topicmapId, assocId);		 
+    }
+    
+    private String findExportDirectoryPath() {
+        // ### use Sysetm.getenv() for the best OS independent solution
+        // see http://docs.oracle.com/javase/6/docs/api/java/lang/System.html
+        String filerepo = System.getProperty("dm4.filerepo.path");
+        if (filerepo != null && !filerepo.isEmpty()) {
+            log.info("=> Writing SVG document to dm4.filerepo \"" + filerepo + "\"");
+            return filerepo + "/";
+        }
+        String userhome = System.getProperty("user.home");
+        if (userhome != null) {
+            log.info("=> Writing SVG document to user.home + \"" + userhome + "\"");
+            return userhome + "/";
+        }
+        return "";
     }
     
 }
