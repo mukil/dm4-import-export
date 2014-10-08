@@ -45,7 +45,7 @@ import de.deepamehta.core.service.Transactional;
 @Path("/import-export")
 @Produces("application/json")
 public class ImportExportPlugin extends PluginActivator {
-
+    
     @Inject    
     private TopicmapsService topicmapsService;
     @Inject
@@ -132,10 +132,10 @@ public class ImportExportPlugin extends PluginActivator {
         } catch (Exception e) {
             throw new RuntimeException("Export Topicmap to SVG failed", e );
         }
-    }   
+    }
 
     @POST
-    @Path("/import")
+    @Path("/import/topicmap")
     @Consumes("multipart/form-data")
     public Topic importTopicmap(UploadedFile file) {
 	try {
@@ -162,7 +162,27 @@ public class ImportExportPlugin extends PluginActivator {
 	    throw new RuntimeException("Importing Topicmap FAILED", e);
 	}
     }
-
+    
+    /** 
+     * Understands an english TAB-separated .csv-File from Mozilla Thunderbid and maps 
+     * entries to the dm4.contacts.*-module 
+     */
+    @POST
+    @Path("/import/contacts/thunderbird/csv/tab/en")
+    @Consumes("multipart/form-data")
+    @Transactional
+    public String importThunderbirdContacts(UploadedFile file) {
+        try {
+            // 
+            String contact_data = file.getString();
+            AddressBookReader reader = new AddressBookReader(dms);
+            reader.readInAddressBookFromTabCSV(contact_data, "de");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return "{ \"result\": \"OK\" }";
+    }
+    
     // Import topics
     private void importTopics(JSONArray topicsArray, Map<Long, Long> mapTopicIds, long topicmapId) {
 	for (int i = 0, size = topicsArray.length(); i < size; i++)	{

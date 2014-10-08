@@ -13,10 +13,14 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 		handler: export_topicmap_toSVG
 	    })
 
-
 	    topicmap_menu.add_item({
 		label: "Import Topicmap",
 		handler: import_topicmap
+	    })
+            
+            topicmap_menu.add_item({
+		label: "Import Address Book (Thunderbird CSV)",
+		handler: import_thunderbird_contacts
 	    })
 	} 
 	
@@ -33,9 +37,18 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 
 
 	function import_topicmap(){
-	    dm4c.get_plugin("de.deepamehta.files").open_upload_dialog("/import-export/import", function(importedTopicmap){
+	    dm4c.get_plugin("de.deepamehta.files").open_upload_dialog("/import-export/import/topicmap", 
+            function(importedTopicmap){
 		dm4c.get_plugin("de.deepamehta.topicmaps").add_topicmap(importedTopicmap.id)
 	    })
+	}
+        
+        function import_thunderbird_contacts(){
+	    dm4c.get_plugin("de.deepamehta.files")
+                    .open_upload_dialog("/import-export/import/contacts/thunderbird/csv/tab/en", 
+                function(response){
+                    console.log("Imported thunderbird contacts .. ", response)
+                })
 	}
 
     })
