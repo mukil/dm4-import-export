@@ -91,6 +91,7 @@ public class ImportExportPlugin extends PluginActivator {
             String documentPath = findExportDirectoryPath() + svgFileName;
             // 3) Create SVGWriter
             SVGRenderer svg = new SVGRenderer(documentPath);
+            svg.startGroupElement(topicmapId);
             // 4) Create all associations
             for (AssociationViewmodel association : associations) {
                 String valueAssoc= association.getSimpleValue().toString();
@@ -132,6 +133,7 @@ public class ImportExportPlugin extends PluginActivator {
                 svg.endElement();
             }
             // 6) Close SVGWriter
+            svg.endElement();
             svg.closeDocument();
             return "{\"filepath\": \""+documentPath+"\"}"; // render in OK Dialog where the file was written to
         } catch (Exception e) {
