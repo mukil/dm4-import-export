@@ -112,8 +112,10 @@ public class ImportExportPlugin extends PluginActivator {
                 if (dx < 0) {
                     alpha = -alpha;
                 }
+                svg.startGroupElement(association.getId());
                 svg.line(x1, x2, y1, y2);
                 svg.text(label_x, label_y,x1+10,y1+10, valueAssoc, "grey", alpha);
+                svg.endElement();
             }
             // 5) Create all topics
             for (TopicViewmodel topic : topics) {
@@ -123,9 +125,11 @@ public class ImportExportPlugin extends PluginActivator {
                 boolean visibility = topic.getVisibility();
                 int boxWidth = value.length() * 9;
                 if (!visibility) { continue ;}
+                svg.startGroupElement(topic.getId());
                 svg.rectangle(x - boxWidth / 2, y - BOX_HEIGHT / 2, boxWidth, BOX_HEIGHT, color(topic.getTypeUri()));
                 svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value, "black");
                 svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
+                svg.endElement();
             }
             // 6) Close SVGWriter
             svg.closeDocument();

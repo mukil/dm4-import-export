@@ -85,5 +85,18 @@ class SVGRenderer {
         svgWriter.writeAttribute("xlink:href", imgUri);
 
     }
+    
+    public void startGroupElement (long elementId) throws XMLStreamException {
+        
+        svgWriter.writeStartElement("g");
+        svgWriter.writeAttribute("id", "" + elementId + "");
+
+    }
+    
+    public void endElement () throws XMLStreamException {
+        
+        svgWriter.writeEndElement();
+
+    }
 
 }
