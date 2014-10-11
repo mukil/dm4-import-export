@@ -60,7 +60,7 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/export/json")
     public Topic exportTopicmapToJSON(@CookieParam("dm4_topicmap_id") long topicmapId) {
 	try {
-	    log.info("Exporting topicmap #########" + topicmapId);
+	    log.info("Exporting Topicmap ######### " + topicmapId);
 	    TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
 	    String json = topicmap.toJSON().toString();
 	    InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
@@ -73,14 +73,14 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/export/svg")
-    public void exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId)  throws XMLStreamException {
+    public String exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId)  throws XMLStreamException {
         final int BOX_HEIGHT = 20;
         final int MARGIN_LEFT = 5;
         final int MARGIN_TOP = 14;
         final int ICON_WIDTH = 16;
         final int ICON_HEIGHT = 16;
         try {
-            log.info("Exporting Topicmaps #########" + topicmapId);
+            log.info("Exporting Topicmap ######### " + topicmapId);
             // 0) Fetch topicmap data
             TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
             Iterable<TopicViewmodel> topics = topicmap.getTopics();
@@ -133,6 +133,7 @@ public class ImportExportPlugin extends PluginActivator {
             }
             // 6) Close SVGWriter
             svg.closeDocument();
+            return "{\"filepath\": \""+documentPath+"\"}"; // render in OK Dialog where the file was written to
         } catch (Exception e) {
             throw new RuntimeException("Export Topicmap to SVG failed", e );
         }
@@ -211,7 +212,7 @@ public class ImportExportPlugin extends PluginActivator {
 	// Plugin plugin = dms.getPlugin(pluginPath);
 	String imagePath = "web"+iconPath.substring(sep);
 	InputStream iconIS = getStaticResource(imagePath);
-	log.info("##### IconIS " + iconIS);
+	log.fine("##### IconIS " + iconIS);
         // 
 	ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	byte [] buffer = new byte[1024];
@@ -223,7 +224,7 @@ public class ImportExportPlugin extends PluginActivator {
 	// all chars in encoded are guaranteed to be 7-bit ASCII
 	byte[] encoded = Base64.encode(fileContent);
 	String imgBase64Str = new String(encoded);
-	log.info("##### IMG BASE64 " + imgBase64Str);
+	log.fine("##### IMG BASE64 " + imgBase64Str);
 	// 
         if (iconPath == null) {
 	    iconPath = "/de.deepamehta.webclient/images/ball-gray.png";
