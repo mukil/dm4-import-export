@@ -29,9 +29,10 @@ dm4c.add_plugin("net.abriraqui.import-export", function(){
 	function export_topicmap_toSVG(){
             var svg_exporter_response = JSON.parse(dm4c.restc.request("POST", 
                 "/import-export/export/svg", undefined, undefined, undefined, "text"))
-            var dialog_message = "<p>Exported Topicmap to SVG Document<br/>'\n\
-                + '<br/><i>" + svg_exporter_response['filepath'] + "</i></p>"
-            dm4c.ui.dialog({"id": "svg-export-ok-dialog", "title": "OK", "content": dialog_message});
+            var dialog_message = "<p>Exported Topicmap to SVG Document<br/>"
+                + "<br/><i>" + svg_exporter_response['filepath'] + "</i></p>"
+            dm4c.ui.dialog({"id": "svg-export-ok-dialog", "title": "File Export - OK", 
+                "content": dialog_message});
         }
 
 
