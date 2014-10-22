@@ -1,14 +1,15 @@
 package net.abriraqui.dm4.importexport;
 
 import de.deepamehta.core.osgi.PluginActivator;
+import de.deepamehta.core.service.Transactional;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.Topic;
 import de.deepamehta.core.TopicType;
 import de.deepamehta.core.Association;
 import de.deepamehta.core.model.TopicModel;
-import de.deepamehta.core.model.CompositeValueModel;
 import de.deepamehta.core.model.AssociationModel;
 import de.deepamehta.core.model.RoleModel;
+import de.deepamehta.core.model.ChildTopicsModel;
 
 import de.deepamehta.plugins.topicmaps.service.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
@@ -39,8 +40,6 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 
 import com.sun.jersey.core.util.Base64;
-import de.deepamehta.core.service.Transactional;
-
 
 @Path("/import-export")
 @Produces("application/json")
@@ -236,7 +235,7 @@ public class ImportExportPlugin extends PluginActivator {
   
     private void createTopic(JSONObject topic, Map<Long, Long> mapTopicIds, long topicmapId) throws JSONException {
 	TopicModel model = new TopicModel(topic);
-	CompositeValueModel viewProps =new CompositeValueModel(topic.getJSONObject("view_props")); 
+	ChildTopicsModel viewProps =new ChildTopicsModel(topic.getJSONObject("view_props")); 
 	long origTopicId = model.getId();
         Topic newTopic = dms.createTopic(model);
 	long topicId = newTopic.getId();
