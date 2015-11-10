@@ -6,11 +6,13 @@ import de.deepamehta.core.TopicType;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Transactional;
+import de.deepamehta.plugins.files.FilesPlugin;
 import de.deepamehta.plugins.files.FilesService;
 import de.deepamehta.plugins.topicmaps.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.AssociationViewmodel;
 import de.deepamehta.plugins.topicmaps.model.TopicViewmodel;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.POST;
@@ -247,17 +249,21 @@ public class ImportExportPlugin extends PluginActivator {
     private String findExportDirectoryPath() {
         // ### use Sysetm.getenv() for the best OS independent solution
         // see http://docs.oracle.com/javase/6/docs/api/java/lang/System.html
-        String filerepo = System.getProperty("dm4.filerepo.path");
-        if (filerepo != null && !filerepo.isEmpty()) {
-            log.info("=> Writing SVG document to dm4.filerepo \"" + filerepo + "\"");
-            return filerepo + "/";
+        if (!FilesPlugin.FILE_REPOSITORY_PER_WORKSPACE) {
+            String filerepo = System.getProperty("dm4.filerepo.path");
+            if (filerepo != null && !filerepo.isEmpty()) {
+                log.info("=> Writing SVG document to dm4.filerepo \"" + filerepo + "\"");
+                return filerepo + "/";
+            }
+            String userhome = System.getProperty("user.home");
+            if (userhome != null) {
+                log.info("=> Writing SVG document to user.home + \"" + userhome + "\"");
+                return userhome + "/";
+            }
+            return "";
+        } else {
+            throw new NotImplementedException();
         }
-        String userhome = System.getProperty("user.home");
-        if (userhome != null) {
-            log.info("=> Writing SVG document to user.home + \"" + userhome + "\"");
-            return userhome + "/";
-        }
-        return "";
     }
 
 }
