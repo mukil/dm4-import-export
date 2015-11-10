@@ -12,7 +12,6 @@ import de.deepamehta.plugins.topicmaps.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.AssociationViewmodel;
 import de.deepamehta.plugins.topicmaps.model.TopicViewmodel;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.POST;
@@ -47,9 +46,9 @@ public class ImportExportPlugin extends PluginActivator {
             TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            String jsonFile = "/topicmap-" + topicmapId + ".txt";
-            String documentPath = findExportDirectoryPath() + jsonFile;
-            Topic createdFile = filesService.createFile(in, documentPath);
+            String jsonFile = "topicmap-" + topicmapId + ".txt";
+            // String documentPath = findExportDirectoryPath() + jsonFile;
+            Topic createdFile = filesService.createFile(in, jsonFile);
             return createdFile;
         } catch (Exception e) {
             throw new RuntimeException("Export failed", e);
@@ -203,9 +202,17 @@ public class ImportExportPlugin extends PluginActivator {
         // String pluginPath = iconPath.substring(1, sep);
         // Plugin plugin = dms.getPlugin(pluginPath);
         String imagePath = "web" + iconPath.substring(sep);
-        InputStream iconIS = getStaticResource(imagePath);
-        log.fine("##### IconIS " + iconIS);
-        // 
+        InputStream iconIS = null;
+        try {
+            iconIS = getStaticResource(imagePath);
+            log.fine("##### IconIS " + iconIS);
+        } catch (Exception e) {
+            // Icon resource not found in this plugin
+            log.info("### FALLBACK to standard grey icon as typeIcon for \""
+                    + imagePath + "\"can not be determined " + "during SVG Export");
+            iconIS = dms.getPlugin("de.deepamehta.webclient").getStaticResource("web/images/ball-gray.png");
+        }
+        // create base64 representation of the current type icon
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         int count = 0;
@@ -218,9 +225,6 @@ public class ImportExportPlugin extends PluginActivator {
         String imgBase64Str = new String(encoded);
         log.fine("##### IMG BASE64 " + imgBase64Str);
         //
-        if (iconPath == null) {
-            iconPath = "/de.deepamehta.webclient/images/ball-gray.png";
-        }
         return "data:image/png;base64," + imgBase64Str;
     }
 
@@ -262,7 +266,8 @@ public class ImportExportPlugin extends PluginActivator {
             }
             return "";
         } else {
-            throw new NotImplementedException();
+            // ### needs something like, for example filesService.getAbsoluteFilerepoPath()
+            throw new RuntimeException("Topicmaps Export to workspace specific filrepos NOT yet implemented");
         }
     }
 
