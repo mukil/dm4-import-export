@@ -45,7 +45,9 @@ public class ImportExportPlugin extends PluginActivator {
             TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            Topic createdFile = filesService.createFile(in, "/topicmap-" + topicmapId + ".txt");
+            String jsonFile = "/topicmap-" + topicmapId + ".txt";
+            String documentPath = findExportDirectoryPath() + jsonFile;
+            Topic createdFile = filesService.createFile(in, documentPath);
             return createdFile;
         } catch (Exception e) {
             throw new RuntimeException("Export failed", e);
@@ -126,6 +128,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     /** @POST
     @Path("/import")
+    @Transactional
     @Consumes("multipart/form-data")
     public Topic importTopicmap(UploadedFile file) {
         try {
