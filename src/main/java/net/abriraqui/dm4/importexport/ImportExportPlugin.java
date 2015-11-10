@@ -47,7 +47,7 @@ public class ImportExportPlugin extends PluginActivator {
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
             String jsonFile = "topicmap-" + topicmapId + ".txt";
-            // String documentPath = findExportDirectoryPath() + jsonFile;
+            // JSON file export relies on/ uses the FilesService
             Topic createdFile = filesService.createFile(in, jsonFile);
             return createdFile;
         } catch (Exception e) {
@@ -72,6 +72,7 @@ public class ImportExportPlugin extends PluginActivator {
             // 1) Setup default file name of SVG to write to
             String svgFileName = "Exported Topicmap " + topicmapId + ".svg";
             // 2) Get DM4 filerepo configuration setting and write to its root (if present)
+            // ### This still relies on figuring out the correct (and absolute) file repo path by itself
             String documentPath = findExportDirectoryPath() + svgFileName;
             // 3) Create SVGWriter
             SVGRenderer svg = new SVGRenderer(documentPath);
