@@ -10,7 +10,7 @@ class SVGRenderer {
     private XMLStreamWriter svgWriter;
 
     public SVGRenderer(String filename) {
-        // ### This should use of the FilesService in DM 4
+        // ### This should use of the FilesService API of DM 4
         try {
             XMLOutputFactory xof = XMLOutputFactory.newInstance();
             svgWriter = xof.createXMLStreamWriter(new FileWriter(filename));

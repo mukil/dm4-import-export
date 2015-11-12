@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.File;
 import java.util.logging.Logger;
 
 @Path("/import-export")
@@ -42,14 +43,13 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/export/json")
     public Topic exportTopicmapToJSON(@CookieParam("dm4_topicmap_id") long topicmapId) {
         try {
-            log.info("Exporting Topicmap ######### " + topicmapId);
+            log.info("Exporting Topicmap JSON ######### " + topicmapId);
             TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            String jsonFile = "topicmap-" + topicmapId + ".txt";
-            // JSON file export relies on/ uses the FilesService
-            Topic createdFile = filesService.createFile(in, jsonFile);
-            return createdFile;
+            String jsonFileName = "topicmap-" + topicmapId + ".txt";
+            return filesService.createFile(in, prefix() + "/" + jsonFileName);
+            // return filesService.createFile(in, jsonFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export failed", e);
         }
@@ -57,6 +57,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Path("/export/svg")
+    @Transactional
     public String exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId) throws XMLStreamException {
         final int BOX_HEIGHT = 20;
         final int MARGIN_LEFT = 5;
@@ -64,16 +65,15 @@ public class ImportExportPlugin extends PluginActivator {
         final int ICON_WIDTH = 16;
         final int ICON_HEIGHT = 16;
         try {
-            log.info("Exporting Topicmap ######### " + topicmapId);
+            log.info("Exporting Topicmap SVG ######### " + topicmapId);
             // 0) Fetch topicmap data
             TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
             Iterable<TopicViewmodel> topics = topicmap.getTopics();
             Iterable<AssociationViewmodel> associations = topicmap.getAssociations();
             // 1) Setup default file name of SVG to write to
-            String svgFileName = "Exported Topicmap " + topicmapId + ".svg";
-            // 2) Get DM4 filerepo configuration setting and write to its root (if present)
-            // ### This still relies on figuring out the correct (and absolute) file repo path by itself
-            String documentPath = findExportDirectoryPath() + svgFileName;
+            String svgFileName = "Exported_Topicmap_" + topicmapId + ".svg";
+            // 2) Get DM4 filerepo configuration setting and write to document to root folder
+            String documentPath = filesService.getFile("/") + "/" + svgFileName;
             // 3) Create SVGWriter
             SVGRenderer svg = new SVGRenderer(documentPath);
             svg.startGroupElement(topicmapId);
@@ -122,6 +122,9 @@ public class ImportExportPlugin extends PluginActivator {
             // 6) Close SVGWriter
             svg.endElement();
             svg.closeDocument();
+            // 7) Create file topic for our new document
+            filesService.getFileTopic(prefix() + "/" + svgFileName);
+            // ### return fileTopic to webclient..
             return "{\"filepath\": \"" + documentPath + "\"}"; // render in OK Dialog where the file was written to
         } catch (Exception e) {
             throw new RuntimeException("Export Topicmap to SVG failed", e);
@@ -251,25 +254,9 @@ public class ImportExportPlugin extends PluginActivator {
         topicmapsService.addAssociationToTopicmap(topicmapId, assocId);
     } **/
 
-    private String findExportDirectoryPath() {
-        // ### use Sysetm.getenv() for the best OS independent solution
-        // see http://docs.oracle.com/javase/6/docs/api/java/lang/System.html
-        if (!FilesPlugin.FILE_REPOSITORY_PER_WORKSPACE) {
-            String filerepo = System.getProperty("dm4.filerepo.path");
-            if (filerepo != null && !filerepo.isEmpty()) {
-                log.info("=> Writing SVG document to dm4.filerepo \"" + filerepo + "\"");
-                return filerepo + "/";
-            }
-            String userhome = System.getProperty("user.home");
-            if (userhome != null) {
-                log.info("=> Writing SVG document to user.home + \"" + userhome + "\"");
-                return userhome + "/";
-            }
-            return "";
-        } else {
-            // ### needs something like, for example filesService.getAbsoluteFilerepoPath()
-            throw new RuntimeException("Topicmaps Export to workspace specific filrepos NOT yet implemented");
-        }
+    private String prefix() {
+        File repo = filesService.getFile("/");
+        return ((FilesPlugin) filesService).repoPath(repo);
     }
 
 }
