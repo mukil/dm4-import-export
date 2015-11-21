@@ -8,10 +8,10 @@ dm4c.add_plugin("net.abriraqui.import-export", function() {
 
             topicmap_menu.add_separator()
 
-            topicmap_menu.add_item({
+            /*** topicmap_menu.add_item({
                 label: "Export Topicmap to JSON",
                 handler: export_topicmap_toSJON
-            })
+            }) **/
 
             /** topicmap_menu.add_item({
                 label: "Import Topicmap",
@@ -26,10 +26,10 @@ dm4c.add_plugin("net.abriraqui.import-export", function() {
 
         }
 	
-        function export_topicmap_toSJON() {
+        /** function export_topicmap_toSJON() {
             var export_file = dm4c.restc.request("POST", "/import-export/export/json")
             dm4c.show_topic(new Topic(export_file), "show")
-        }
+        } */
 
         function export_topicmap_toSVG() {
             var svg_exporter_response = JSON.parse(dm4c.restc.request("POST",

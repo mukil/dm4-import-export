@@ -202,18 +202,19 @@ public class ImportExportPlugin extends PluginActivator {
     private String typeIconDataUri(String typeUri) throws IOException {
         TopicType topicType = dms.getTopicType(typeUri);
         String iconPath = (String) topicType.getViewConfig("dm4.webclient.view_config", "dm4.webclient.icon");
-        int sep = iconPath.indexOf("/", 2);
+        InputStream iconIS = null;
+        // TODO: Load icons bundled in other plugins
         // String pluginPath = iconPath.substring(1, sep);
         // Plugin plugin = dms.getPlugin(pluginPath);
-        String imagePath = "web" + iconPath.substring(sep);
-        InputStream iconIS = null;
         try {
+            int sep = iconPath.indexOf("/", 2); // Note: iconPath may be null and throw a NPE
+            String imagePath = "web" + iconPath.substring(sep);
             iconIS = getStaticResource(imagePath);
             log.fine("##### IconIS " + iconIS);
         } catch (Exception e) {
             // Icon resource not found in this plugin
             log.info("### FALLBACK to standard grey icon as typeIcon for \""
-                    + imagePath + "\"can not be determined " + "during SVG Export");
+                    + typeUri + "\" icon could not be determined " + "during SVG Export");
             iconIS = dms.getPlugin("de.deepamehta.webclient").getStaticResource("web/images/ball-gray.png");
         }
         // create base64 representation of the current type icon
