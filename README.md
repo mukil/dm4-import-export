@@ -32,6 +32,14 @@ Select "Export Topicmap to SVG" if you want to save the current Topicmap as an i
 Version History
 ---------------
 
+**0.4**, Upcoming
+
+- Improve exported SVG Document about using Defs:
+  [http://www.w3.org/TR/SVG11/struct.html#DefsElement](http://www.w3.org/TR/SVG11/struct.html#DefsElement)
+- Test improved text export (e.g. with Inkscape) about textArea:
+  [http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement](http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement)
+- Rename repository to dm4-svg-export
+
 **0.3**, 21. November 2015
 
 - More robust SVG Topicmap export (fallback for icons unavailable)
