@@ -1,28 +1,36 @@
 package net.abriraqui.dm4.importexport;
 
 import com.sun.jersey.core.util.Base64;
+import de.deepamehta.core.Association;
 import de.deepamehta.core.Topic;
 import de.deepamehta.core.TopicType;
+import de.deepamehta.core.model.AssociationModel;
+import de.deepamehta.core.model.RoleModel;
+import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Transactional;
 import de.deepamehta.plugins.files.FilesPlugin;
 import de.deepamehta.plugins.files.FilesService;
+import de.deepamehta.plugins.files.UploadedFile;
 import de.deepamehta.plugins.topicmaps.TopicmapsService;
 import de.deepamehta.plugins.topicmaps.model.AssociationViewmodel;
 import de.deepamehta.plugins.topicmaps.model.TopicViewmodel;
 import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
+import de.deepamehta.plugins.topicmaps.model.ViewProperties;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 
-import javax.ws.rs.CookieParam;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.xml.stream.XMLStreamException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 @Path("/import-export")
@@ -58,7 +66,7 @@ public class ImportExportPlugin extends PluginActivator {
     @POST
     @Path("/export/svg")
     @Transactional
-    public String exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId) throws XMLStreamException {
+    public Topic exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId) throws XMLStreamException {
         final int BOX_HEIGHT = 20;
         final int MARGIN_LEFT = 5;
         final int MARGIN_TOP = 14;
@@ -122,16 +130,14 @@ public class ImportExportPlugin extends PluginActivator {
             // 6) Close SVGWriter
             svg.endElement();
             svg.closeDocument();
-            // 7) Create file topic for our new document
-            filesService.getFileTopic(prefix() + "/" + svgFileName);
-            // ### return fileTopic to webclient..
-            return "{\"filepath\": \"" + documentPath + "\"}"; // render in OK Dialog where the file was written to
+            // 7) Create and return new file topic for the exported document
+            return filesService.getFileTopic(prefix() + "/" + svgFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export Topicmap to SVG failed", e);
         }
     }
 
-    /** @POST
+    @POST
     @Path("/import")
     @Transactional
     @Consumes("multipart/form-data")
@@ -183,7 +189,7 @@ public class ImportExportPlugin extends PluginActivator {
                 log.warning("Association NOT imported");
             }
         }
-    } **/
+    }
 
     private String color(String typeUri) {
         if (typeUri.equals("dm4.contacts.institution")) {
@@ -233,7 +239,6 @@ public class ImportExportPlugin extends PluginActivator {
         return "data:image/png;base64," + imgBase64Str;
     }
 
-    /**
     private void createTopic(JSONObject topic, Map<Long, Long> mapTopicIds, long topicmapId) throws JSONException {
         TopicModel model = new TopicModel(topic);
         ViewProperties viewProps = new ViewProperties(topic.getJSONObject("view_props"));
@@ -253,7 +258,7 @@ public class ImportExportPlugin extends PluginActivator {
         Association newAssociation = dms.createAssociation(assocModel);
         long assocId = newAssociation.getId();
         topicmapsService.addAssociationToTopicmap(topicmapId, assocId);
-    } **/
+    }
 
     private String prefix() {
         File repo = filesService.getFile("/");
