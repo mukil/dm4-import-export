@@ -36,13 +36,13 @@ dm4c.add_plugin("net.abriraqui.import-export", function() {
             dm4c.show_topic(new Topic(svg_exported_file), "show")
         }
 
-	    function import_topicmap() {
+        function import_topicmap() {
             dm4c.get_plugin("de.deepamehta.files")
                 .open_upload_dialog("/import-export/import", function(importedTopicmap) {
                     dm4c.get_plugin("de.deepamehta.topicmaps").add_topicmap(importedTopicmap.id)
                 })
         }
-	})
+    })
 
 })
 
