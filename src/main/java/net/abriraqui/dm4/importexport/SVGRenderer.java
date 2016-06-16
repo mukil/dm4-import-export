@@ -16,7 +16,7 @@ class SVGRenderer {
             svgWriter = xof.createXMLStreamWriter(new FileWriter(filename));
             svgWriter.writeStartDocument();
             svgWriter.writeDTD("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 20000802//EN\" "
-                    + "\"http://www.w3.org/TR/2000/CR-SVG-20000802/DTD/svg-20000802.dtd\">");
+                + "\"http://www.w3.org/TR/2000/CR-SVG-20000802/DTD/svg-20000802.dtd\">");
             svgWriter.writeStartElement("svg");
             svgWriter.writeAttribute("width", "1200");
             svgWriter.writeAttribute("height", "1200");

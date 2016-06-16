@@ -7,17 +7,17 @@ import de.deepamehta.core.TopicType;
 import de.deepamehta.core.model.AssociationModel;
 import de.deepamehta.core.model.RoleModel;
 import de.deepamehta.core.model.TopicModel;
+import de.deepamehta.core.model.topicmaps.AssociationViewModel;
+import de.deepamehta.core.model.topicmaps.TopicViewModel;
+import de.deepamehta.core.model.topicmaps.ViewProperties;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Transactional;
-import de.deepamehta.plugins.files.FilesPlugin;
-import de.deepamehta.plugins.files.FilesService;
-import de.deepamehta.plugins.files.UploadedFile;
-import de.deepamehta.plugins.topicmaps.TopicmapsService;
-import de.deepamehta.plugins.topicmaps.model.AssociationViewmodel;
-import de.deepamehta.plugins.topicmaps.model.TopicViewmodel;
-import de.deepamehta.plugins.topicmaps.model.TopicmapViewmodel;
-import de.deepamehta.plugins.topicmaps.model.ViewProperties;
+import de.deepamehta.files.FilesPlugin;
+import de.deepamehta.files.FilesService;
+import de.deepamehta.files.UploadedFile;
+import de.deepamehta.topicmaps.TopicmapsService;
+import de.deepamehta.topicmaps.model.TopicmapViewmodel;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -76,8 +76,8 @@ public class ImportExportPlugin extends PluginActivator {
             log.info("Exporting Topicmap SVG ######### " + topicmapId);
             // 0) Fetch topicmap data
             TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
-            Iterable<TopicViewmodel> topics = topicmap.getTopics();
-            Iterable<AssociationViewmodel> associations = topicmap.getAssociations();
+            Iterable<TopicViewModel> topics = topicmap.getTopics();
+            Iterable<AssociationViewModel> associations = topicmap.getAssociations();
             // 1) Setup default file name of SVG to write to
             String svgFileName = "Exported_Topicmap_" + topicmapId + ".svg";
             // 2) Get DM4 filerepo configuration setting and write to document to root folder
@@ -86,14 +86,14 @@ public class ImportExportPlugin extends PluginActivator {
             SVGRenderer svg = new SVGRenderer(documentPath);
             svg.startGroupElement(topicmapId);
             // 4) Create all associations
-            for (AssociationViewmodel association : associations) {
+            for (AssociationViewModel association : associations) {
                 String valueAssoc = association.getSimpleValue().toString();
                 long topic1Id = association.getRoleModel1().getPlayerId();
                 long topic2Id = association.getRoleModel2().getPlayerId();
-                TopicViewmodel topic1 = topicmap.getTopic(topic1Id);
+                TopicViewModel topic1 = topicmap.getTopic(topic1Id);
                 int x1 = topic1.getX();
                 int y1 = topic1.getY();
-                TopicViewmodel topic2 = topicmap.getTopic(topic2Id);
+                TopicViewModel topic2 = topicmap.getTopic(topic2Id);
                 int x2 = topic2.getX();
                 int y2 = topic2.getY();
                 // 
@@ -112,7 +112,7 @@ public class ImportExportPlugin extends PluginActivator {
                 svg.endElement();
             }
             // 5) Create all topics
-            for (TopicViewmodel topic : topics) {
+            for (TopicViewModel topic : topics) {
                 String value = topic.getSimpleValue().toString();
                 int x = topic.getX();
                 int y = topic.getY();
@@ -154,7 +154,7 @@ public class ImportExportPlugin extends PluginActivator {
             String origTopicmapName = info.getString("value");
             Topic importedTopicmap =
                     topicmapsService.createTopicmap("Imported Topicmap: " + origTopicmapName
-                            , "dm4.webclient.default_topicmap_renderer");
+                            , "dm4.webclient.default_topicmap_renderer", false);
             long topicmapId = importedTopicmap.getId();
             log.info("###### importedTopicmapId " + topicmapId);
             // 
@@ -206,12 +206,12 @@ public class ImportExportPlugin extends PluginActivator {
     /** ### Make this work for custom icons too, this works currently just with icons included in the standard
      * distribution. */
     private String typeIconDataUri(String typeUri) throws IOException {
-        TopicType topicType = dms.getTopicType(typeUri);
+        TopicType topicType = dm4.getTopicType(typeUri);
         String iconPath = (String) topicType.getViewConfig("dm4.webclient.view_config", "dm4.webclient.icon");
         InputStream iconIS = null;
         // TODO: Load icons bundled in other plugins
         // String pluginPath = iconPath.substring(1, sep);
-        // Plugin plugin = dms.getPlugin(pluginPath);
+        // Plugin plugin = dm4.getPlugin(pluginPath);
         try {
             int sep = iconPath.indexOf("/", 2); // Note: iconPath may be null and throw a NPE
             String imagePath = "web" + iconPath.substring(sep);
@@ -221,7 +221,7 @@ public class ImportExportPlugin extends PluginActivator {
             // Icon resource not found in this plugin
             log.info("### FALLBACK to standard grey icon as typeIcon for \""
                     + typeUri + "\" icon could not be determined " + "during SVG Export");
-            iconIS = dms.getPlugin("de.deepamehta.webclient").getStaticResource("web/images/ball-gray.png");
+            iconIS = dm4.getPlugin("de.deepamehta.webclient").getStaticResource("web/images/ball-gray.png");
         }
         // create base64 representation of the current type icon
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -240,22 +240,22 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private void createTopic(JSONObject topic, Map<Long, Long> mapTopicIds, long topicmapId) throws JSONException {
-        TopicModel model = new TopicModel(topic);
+        TopicModel model = mf.newTopicModel(topic);
         ViewProperties viewProps = new ViewProperties(topic.getJSONObject("view_props"));
         long origTopicId = model.getId();
-        Topic newTopic = dms.createTopic(model);
+        Topic newTopic = dm4.createTopic(model);
         long topicId = newTopic.getId();
         mapTopicIds.put(origTopicId, topicId);
         topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
     }
 
     private void createAssociation(JSONObject association, Map<Long, Long> mapTopicIds, long topicmapId) {
-        AssociationModel assocModel = new AssociationModel(association);
+        AssociationModel assocModel = mf.newAssociationModel(association);
         RoleModel role1 = assocModel.getRoleModel1();
         role1.setPlayerId(mapTopicIds.get(role1.getPlayerId()));
         RoleModel role2 = assocModel.getRoleModel2();
         role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
-        Association newAssociation = dms.createAssociation(assocModel);
+        Association newAssociation = dm4.createAssociation(assocModel);
         long assocId = newAssociation.getId();
         topicmapsService.addAssociationToTopicmap(topicmapId, assocId);
     }
