@@ -6,7 +6,7 @@
     <name>DeepaMehta 4 Import Export</name>
     <groupId>net.abriraqui.dm4</groupId>
     <artifactId>dm48-import-export</artifactId>
-    <version>0.4-SNAPSHOT</version>
+    <version>0.5-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <parent>
@@ -14,6 +14,10 @@
         <artifactId>deepamehta-plugin</artifactId>
         <version>4.8</version>
     </parent>
+
+    <properties>
+        <dm4.deploy.dir>/home/malted/source/mikro/deepamehta/bundle-deploy</dm4.deploy.dir>
+    </properties>
 
     <dependencies>
         <dependency>

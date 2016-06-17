@@ -5,7 +5,9 @@ import de.deepamehta.core.Association;
 import de.deepamehta.core.Topic;
 import de.deepamehta.core.TopicType;
 import de.deepamehta.core.model.AssociationModel;
+import de.deepamehta.core.model.ChildTopicsModel;
 import de.deepamehta.core.model.RoleModel;
+import de.deepamehta.core.model.SimpleValue;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.topicmaps.AssociationViewModel;
 import de.deepamehta.core.model.topicmaps.TopicViewModel;
@@ -13,7 +15,6 @@ import de.deepamehta.core.model.topicmaps.ViewProperties;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Transactional;
-import de.deepamehta.files.FilesPlugin;
 import de.deepamehta.files.FilesService;
 import de.deepamehta.files.UploadedFile;
 import de.deepamehta.topicmaps.TopicmapsService;
@@ -28,9 +29,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.File;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Path("/import-export")
@@ -56,7 +59,7 @@ public class ImportExportPlugin extends PluginActivator {
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
             String jsonFileName = "topicmap-" + topicmapId + ".txt";
-            return filesService.createFile(in, prefix() + "/" + jsonFileName);
+            return filesService.createFile(in, filesService.pathPrefix() + "/" + jsonFileName);
             // return filesService.createFile(in, jsonFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export failed", e);
@@ -131,7 +134,7 @@ public class ImportExportPlugin extends PluginActivator {
             svg.endElement();
             svg.closeDocument();
             // 7) Create and return new file topic for the exported document
-            return filesService.getFileTopic(prefix() + "/" + svgFileName);
+            return filesService.getFileTopic(filesService.pathPrefix() + "/" + svgFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export Topicmap to SVG failed", e);
         }
@@ -165,6 +168,87 @@ public class ImportExportPlugin extends PluginActivator {
         } catch (Exception e) {
             throw new RuntimeException("Importing Topicmap FAILED", e);
         }
+    }
+
+    @POST
+    @Path("/import/bookmarks/firefox")
+    @Transactional
+    @Consumes("multipart/form-data")
+    public String importFirefoxBookmarks(UploadedFile file) {
+        try {
+            String json = file.getString("UTF-8");
+            JSONObject fileContent = new JSONObject(json);
+            JSONArray firstChildren = fileContent.getJSONArray("children");
+            log.info("###### Starting to map Firefox Bookmark Backup Entries to DeepaMehta 4 Web Resources ######");
+            int webResourcesCreated = 0;
+            for (int i = 0; i < firstChildren.length(); i++) {
+                JSONObject entry = firstChildren.getJSONObject(i);
+                if (entry.has("children")) {
+                    JSONArray entryChilds = entry.getJSONArray("children");
+                    for (int k = 0; k < entryChilds.length(); k++) {
+                        JSONObject childEntry = entryChilds.getJSONObject(k);
+                        String folderName;
+                        if (childEntry.has("title") && childEntry.has("uri")) { // Data Quality Criteria
+                            String bookmarkDescription = childEntry.getString("title");
+                            String bookmarkUrl = childEntry.getString("uri");
+                            long dateAdded = childEntry.getLong("dateAdded");
+                            dateAdded = new Date(dateAdded / 1000).getTime();
+                            long lastModified = childEntry.getLong("lastModified");
+                            lastModified = new Date(lastModified / 1000).getTime();
+                            if (childEntry.has("type") && childEntry.getString("type").equals("text/x-moz-place-container")) {
+                                log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags - NOT YET IMPLEMENTED");
+                                folderName = bookmarkDescription;
+                                /** JSONArray entryChildsChilds = childEntry.getJSONArray("children");
+                                for (int m = 0; m < entryChildsChilds.length(); m++) {
+                                    JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
+                                    if (childChildEntry.has("title")) {
+                                        log.info("      3rdLevel Title: " + childChildEntry.getString("title"));
+                                    }
+                                    if (childChildEntry.has("uri")) {
+                                        log.info("      3rdLevel URL: " + childChildEntry.getString("uri"));
+                                    }
+                                    // debugObjectPropertyKeys(childEntry);
+                                } **/
+                            } else {
+                                // log.info("Read Web Resource: " + bookmarkDescription + " Added: " + dateAdded + " Modified: " + lastModified);
+                                Topic webResource = createNewWebResourceTopic(bookmarkUrl, bookmarkDescription, dateAdded, lastModified);
+                                if (webResource != null) webResourcesCreated++;
+                            }
+                        }
+                    }
+                }
+            }
+            log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreated + " new web resources ####");
+            return "{\"message\": \"All the bookmarks contained in the backup file were successfully mapped as topics "
+                + "of type <em>Web Resource</em>.<br/><br/>Newly created: "+ webResourcesCreated + "\"}";
+        } catch (Exception e) {
+            throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
+        }
+    }
+
+    private Topic createNewWebResourceTopic(String url, String description, long created, long modified) {
+        // 1) Check if a Web Resource Topic with that URL already exists
+        Topic webResource;
+        try {
+            webResource = dm4.getTopicByValue("dm4.webbrowser.url", new SimpleValue(url));
+            if (webResource != null) {
+                log.info("### Web Resource \""+url+"\" EXISTS - NOT UPDATED");
+                return null;
+            }
+        } catch (RuntimeException re) {
+            // This should be an AccessControlExcception
+            throw new RuntimeException(re);
+        }
+        if (url.startsWith("place:")) return null; // do not import firefox internal bookmarks
+        // 2) Create new Web Resource Topic
+        ChildTopicsModel childValues = mf.newChildTopicsModel();
+        childValues.put("dm4.webbrowser.url", url);
+        childValues.put("dm4.webbrowser.web_resource_description", description);
+        webResource = dm4.createTopic(mf.newTopicModel("dm4.webbrowser.web_resource", childValues));
+        webResource.setProperty("dm4.time.created", created, true);
+        webResource.setProperty("dm4.time.modified", modified, true);
+        log.info("### Web Resource \""+url+"\" CREATED");
+        return webResource;
     }
 
     // Import topics
@@ -258,11 +342,6 @@ public class ImportExportPlugin extends PluginActivator {
         Association newAssociation = dm4.createAssociation(assocModel);
         long assocId = newAssociation.getId();
         topicmapsService.addAssociationToTopicmap(topicmapId, assocId);
-    }
-
-    private String prefix() {
-        File repo = filesService.getFile("/");
-        return ((FilesPlugin) filesService).repoPath(repo);
     }
 
 }
