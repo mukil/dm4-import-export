@@ -187,33 +187,27 @@ public class ImportExportPlugin extends PluginActivator {
                     JSONArray entryChilds = entry.getJSONArray("children");
                     for (int k = 0; k < entryChilds.length(); k++) {
                         JSONObject childEntry = entryChilds.getJSONObject(k);
-                        String folderName;
-                        if (childEntry.has("title") && childEntry.has("uri")) { // Data Quality Criteria
-                            String bookmarkDescription = childEntry.getString("title");
-                            String bookmarkUrl = childEntry.getString("uri");
-                            long dateAdded = childEntry.getLong("dateAdded");
-                            dateAdded = new Date(dateAdded / 1000).getTime();
-                            long lastModified = childEntry.getLong("lastModified");
-                            lastModified = new Date(lastModified / 1000).getTime();
-                            if (childEntry.has("type") && childEntry.getString("type").equals("text/x-moz-place-container")) {
-                                log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags - NOT YET IMPLEMENTED");
-                                folderName = bookmarkDescription;
-                                /** JSONArray entryChildsChilds = childEntry.getJSONArray("children");
-                                for (int m = 0; m < entryChildsChilds.length(); m++) {
-                                    JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
-                                    if (childChildEntry.has("title")) {
-                                        log.info("      3rdLevel Title: " + childChildEntry.getString("title"));
-                                    }
-                                    if (childChildEntry.has("uri")) {
-                                        log.info("      3rdLevel URL: " + childChildEntry.getString("uri"));
-                                    }
-                                    // debugObjectPropertyKeys(childEntry);
-                                } **/
-                            } else {
-                                // log.info("Read Web Resource: " + bookmarkDescription + " Added: " + dateAdded + " Modified: " + lastModified);
-                                Topic webResource = createNewWebResourceTopic(bookmarkUrl, bookmarkDescription, dateAdded, lastModified);
+                        String entryType = childEntry.getString("type");
+                        if (entryType.equals("text/x-moz-place")) {
+                            if (childEntry.has("title") && childEntry.has("uri")) {
+                                Topic webResource = transformResourceEntry(childEntry);
                                 if (webResource != null) webResourcesCreated++;
+                            } else {
+                                log.warning("Skipping Bookmark entry due to missing Title or URL, " + childEntry.toString());
                             }
+                        } else if (entryType.equals("text/x-moz-place-container")) {
+                            log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags - NOT YET IMPLEMENTED");
+                            String folderName = childEntry.getString("title"); // ### use dm4-tags module
+                            /** JSONArray entryChildsChilds = childEntry.getJSONArray("children");
+                             * for (int m = 0; m < entryChildsChilds.length(); m++) {
+                             * JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
+                             * if (childChildEntry.has("title")) {
+                             * log.info("      3rdLevel Title: " + childChildEntry.getString("title"));
+                             * }
+                             * if (childChildEntry.has("uri")) {
+                             * log.info("      3rdLevel URL: " + childChildEntry.getString("uri"));
+                             * }
+                             * } **/
                         }
                     }
                 }
@@ -223,6 +217,32 @@ public class ImportExportPlugin extends PluginActivator {
                 + "of type <em>Web Resource</em>.<br/><br/>Newly created: "+ webResourcesCreated + "\"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
+        }
+    }
+
+    private Topic transformResourceEntry(JSONObject childEntry) {
+        try {
+            String bookmarkDescription = childEntry.getString("title");
+            String bookmarkUrl = childEntry.getString("uri");
+            long dateAdded = 0;
+            if (bookmarkUrl.startsWith("place:")) return null; // do not import firefox internal bookmarks
+            if (childEntry.has("dateAdded")) {
+                dateAdded = childEntry.getLong("dateAdded");
+                dateAdded = new Date(dateAdded / 1000).getTime();
+            } else {
+                log.warning("Could not detect " + bookmarkDescription + " dateAdded timestamp, setting it NOW, DEBUG: " + childEntry.toString());
+            }
+            long lastModified = 0;
+            if (childEntry.has("lastModified")) {
+                childEntry.getLong("lastModified");
+                lastModified = new Date(lastModified / 1000).getTime();
+            } else {
+                log.warning("Could not detect " + bookmarkDescription + " lastModified timestamp, setting it NOW, DEBUG: " + childEntry.toString());
+            }
+            return createNewWebResourceTopic(bookmarkUrl, bookmarkDescription, dateAdded, lastModified);
+        } catch (JSONException ex) {
+            Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
         }
     }
 
@@ -239,14 +259,13 @@ public class ImportExportPlugin extends PluginActivator {
             // This should be an AccessControlExcception
             throw new RuntimeException(re);
         }
-        if (url.startsWith("place:")) return null; // do not import firefox internal bookmarks
         // 2) Create new Web Resource Topic
         ChildTopicsModel childValues = mf.newChildTopicsModel();
         childValues.put("dm4.webbrowser.url", url);
         childValues.put("dm4.webbrowser.web_resource_description", description);
         webResource = dm4.createTopic(mf.newTopicModel("dm4.webbrowser.web_resource", childValues));
-        webResource.setProperty("dm4.time.created", created, true);
-        webResource.setProperty("dm4.time.modified", modified, true);
+        if (created != 0) webResource.setProperty("dm4.time.created", created, true);
+        if (modified != 0) webResource.setProperty("dm4.time.modified", modified, true);
         log.info("### Web Resource \""+url+"\" CREATED");
         return webResource;
     }
