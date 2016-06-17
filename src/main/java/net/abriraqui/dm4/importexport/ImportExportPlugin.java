@@ -225,7 +225,8 @@ public class ImportExportPlugin extends PluginActivator {
             String bookmarkDescription = childEntry.getString("title");
             String bookmarkUrl = childEntry.getString("uri");
             long dateAdded = 0;
-            if (bookmarkUrl.startsWith("place:")) return null; // do not import firefox internal bookmarks
+            if (bookmarkUrl.startsWith("place:") || bookmarkUrl.startsWith("chrome:")
+                || bookmarkUrl.startsWith("about:")) return null; // do not import browser internal bookmarks
             if (childEntry.has("dateAdded")) {
                 dateAdded = childEntry.getLong("dateAdded");
                 dateAdded = new Date(dateAdded / 1000).getTime();
