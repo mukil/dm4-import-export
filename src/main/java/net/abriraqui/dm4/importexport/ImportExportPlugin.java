@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -180,6 +179,7 @@ public class ImportExportPlugin extends PluginActivator {
             JSONObject fileContent = new JSONObject(json);
             JSONArray firstChildren = fileContent.getJSONArray("children");
             log.info("###### Starting to map Firefox Bookmark Backup Entries to DeepaMehta 4 Web Resources ######");
+            Topic importNote = createNoteImportTopic(file.getName());
             int webResourcesCreated = 0;
             for (int i = 0; i < firstChildren.length(); i++) {
                 JSONObject entry = firstChildren.getJSONObject(i);
@@ -191,7 +191,10 @@ public class ImportExportPlugin extends PluginActivator {
                         if (entryType.equals("text/x-moz-place")) {
                             if (childEntry.has("title") && childEntry.has("uri")) {
                                 Topic webResource = transformResourceEntry(childEntry);
-                                if (webResource != null) webResourcesCreated++;
+                                if (webResource != null) {
+                                    webResourcesCreated++;
+                                    createSimpleAssociation(importNote, webResource);
+                                }
                             } else {
                                 log.warning("Skipping Bookmark entry due to missing Title or URL, " + childEntry.toString());
                             }
@@ -214,7 +217,7 @@ public class ImportExportPlugin extends PluginActivator {
             }
             log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreated + " new web resources ####");
             return "{\"message\": \"All the bookmarks contained in the backup file were successfully mapped as topics "
-                + "of type <em>Web Resource</em>.<br/><br/>Newly created: "+ webResourcesCreated + "\"}";
+                + "of type <em>Web Resource</em>.<br/><br/>Newly created: "+ webResourcesCreated + "\", \"topic_id\": "+importNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
         }
@@ -245,6 +248,23 @@ public class ImportExportPlugin extends PluginActivator {
             Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
             return null;
         }
+    }
+
+    private Topic createNoteImportTopic(String fileName) {
+        ChildTopicsModel childValues = mf.newChildTopicsModel();
+        childValues.put("dm4.notes.title", "Firefox Bookmarks Importer Note, " + fileName);
+        childValues.put("dm4.notes.text", "This note relates web resources created through an import process, namely the Firefox Bookmark Backup File "
+            + "(" + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
+            + "web resources you imported when and from which backup file they originated from.");
+        Topic importerNote = dm4.createTopic(mf.newTopicModel("dm4.notes.note", childValues));
+        log.info("### Importer Note Topic for \""+fileName+"\" CREATED");
+        return importerNote;
+    }
+
+    private Association createSimpleAssociation(Topic importerNote, Topic webResourceNote) {
+        return dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
+            mf.newTopicRoleModel(importerNote.getId(), "dm4.core.default"),
+            mf.newTopicRoleModel(webResourceNote.getId(), "dm4.core.default")));
     }
 
     private Topic createNewWebResourceTopic(String url, String description, long created, long modified) {

@@ -35,6 +35,9 @@ dm4c.add_plugin("net.abriraqui.import-export", function() {
                     dm4c.ui.dialog({"title": "Fine!", "content": response.message,
                         "width": 300, "button_label": "OK",
                         "button_handler": function(){}, "auto_close": true })
+                    if (response.hasOwnProperty("topic_id")) {
+                        dm4c.do_reveal_topic(response.topic_id, "show")
+                    }
                 })
         }
     })
