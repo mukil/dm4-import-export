@@ -286,6 +286,7 @@ public class ImportExportPlugin extends PluginActivator {
         childValues.put("dm4.webbrowser.web_resource_description", description);
         webResource = dm4.createTopic(mf.newTopicModel("dm4.webbrowser.web_resource", childValues));
         if (created != 0) webResource.setProperty("dm4.time.created", created, true);
+        // lastModified is anyway overwritten by dm4-times plugin as (i guess) setting the timepropery is an udpate
         if (modified != 0) webResource.setProperty("dm4.time.modified", modified, true);
         log.info("### Web Resource \""+url+"\" CREATED");
         return webResource;
