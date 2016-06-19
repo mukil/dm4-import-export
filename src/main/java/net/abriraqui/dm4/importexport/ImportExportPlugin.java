@@ -252,7 +252,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     private Topic createNoteImportTopic(String fileName) {
         ChildTopicsModel childValues = mf.newChildTopicsModel();
-        childValues.put("dm4.notes.title", "Firefox Bookmarks Importer Note, " + fileName);
+        childValues.put("dm4.notes.title", "Firefox Bookmarks Backup Import, " + fileName);
         childValues.put("dm4.notes.text", "This note relates web resources created through an import process, namely the Firefox Bookmark Backup File "
             + "(" + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
             + "web resources you imported when and from which backup file they originated from.");
@@ -277,8 +277,11 @@ public class ImportExportPlugin extends PluginActivator {
                 return null;
             }
         } catch (RuntimeException re) {
-            // This should be an AccessControlExcception
-            throw new RuntimeException(re);
+            // This could be an AccessControlExcception or a runtime exception pointing at ambiguity of a
+            // java.util.NoSuchElementException: More than one element in org.neo4j.index.impl.lucene.LuceneIndex
+            // In any way, we cannot do any thing more about the circumstances which lead us here but noting them.
+            log.warning("## Web Resource could not be created, either due to an access control issue or a "
+                + "messed up lucene KEY index, " + re.getCause().getLocalizedMessage());
         }
         // 2) Create new Web Resource Topic
         ChildTopicsModel childValues = mf.newChildTopicsModel();
