@@ -280,8 +280,9 @@ public class ImportExportPlugin extends PluginActivator {
             // This could be an AccessControlExcception or a runtime exception pointing at ambiguity of a
             // java.util.NoSuchElementException: More than one element in org.neo4j.index.impl.lucene.LuceneIndex
             // In any way, we cannot do any thing more about the circumstances which lead us here but noting them.
-            log.warning("## Web Resource could not be created, either due to an access control issue or a "
-                + "messed up lucene KEY index, " + re.getCause().getLocalizedMessage());
+            log.warning("Web Resource could not be created, either due to an access control issue or a "
+                + "messed up lucene KEY index (allowing web resources to exists just once in a DB), caused by: "
+                + re.getCause().getLocalizedMessage());
         }
         // 2) Create new Web Resource Topic
         ChildTopicsModel childValues = mf.newChildTopicsModel();
