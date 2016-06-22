@@ -6,7 +6,7 @@
     <name>DeepaMehta 4 Import Export</name>
     <groupId>net.abriraqui.dm4</groupId>
     <artifactId>dm48-import-export</artifactId>
-    <version>0.5</version>
+    <version>0.6-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <parent>

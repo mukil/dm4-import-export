@@ -28,17 +28,23 @@ In the Topicmap dropdown menu:
 Select "Export Topicmap to SVG" if you want to save the current Topicmap as an image in SVG format
 
 
-
-Version History
----------------
-
-**0.4**, Upcoming
+Research
+--------
 
 - Improve exported SVG Document about using Defs:
   [http://www.w3.org/TR/SVG11/struct.html#DefsElement](http://www.w3.org/TR/SVG11/struct.html#DefsElement)
 - Test improved text export (e.g. with Inkscape) about textArea:
   [http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement](http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement)
 - Investigate if wheter [.graphml](https://en.wikipedia.org/wiki/GraphML) (e.g. for yEd) or `.mm` (used in Freemind) is another valuable export format. I currently assume that `.mm` is to restricted to house topic maps (cause mind maps usually have _one_ central topic not many) and one topicmap would translate to many mind maps (one for each "cluster" in the topic map).
+
+
+Version History
+---------------
+
+**0.5**, 22 Jun 2016
+
+- Added support for importing bookmarks based on _Firefox Bookmark Backup_ documents (.json).
+- Compatible with DeepaMehta 4.8
 
 **0.3.1**, 11. December 2015
 
