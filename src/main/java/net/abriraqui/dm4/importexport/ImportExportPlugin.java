@@ -229,8 +229,10 @@ public class ImportExportPlugin extends PluginActivator {
                 if (folderTopic == null) {
                     // 1.1) Create new Tag Item
                     folderTopic = tagging.createTagTopic(folderName, "Firefox Bookmarks Folder Name", false);
-                    // 1.2) Create association between current tag and parent tag (if given)
-                    getOrCreateSimpleAssoc(folderNameTag, folderTopic);
+                    if (folderNameTag != null) {
+                        // 1.2) Create association between current tag and parent tag (if given)
+                        getOrCreateSimpleAssoc(folderNameTag, folderTopic);
+                    }
                 }
                 JSONArray entryChildsChilds = childEntry.getJSONArray("children");
                 log.info("  "+recursionCount+ "ndLevel Bookmark Folder " + folderName + " - TODO: Transform \""+folderName+"\" into TAG");
@@ -268,7 +270,7 @@ public class ImportExportPlugin extends PluginActivator {
             } else {
                 log.warning("Could not detect " + bookmarkDescription + " lastModified timestamp, setting it NOW, DEBUG: " + childEntry.toString());
             }
-            return createNewWebResourceTopic(bookmarkUrl, bookmarkDescription, dateAdded, lastModified);
+            return getOrCreateWebResource(bookmarkUrl, bookmarkDescription, dateAdded, lastModified);
         } catch (JSONException ex) {
             Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
             return null;
@@ -297,7 +299,7 @@ public class ImportExportPlugin extends PluginActivator {
                 mf.newTopicRoleModel(webResource.getId(), "dm4.core.default")));
         }
         if (folderNameTag != null) {
-            getOrCreateSimpleAssoc(webResource, folderNameTag);
+            getOrCreateSimpleAssoc(folderNameTag, webResource); // choosing to set the tag as parent
         }
         return importedAssoc;
     }
@@ -305,18 +307,18 @@ public class ImportExportPlugin extends PluginActivator {
     private Association getOrCreateSimpleAssoc(Topic defaultPlayer1, Topic defaultPlayer2) {
         // 3) Check and create assoc to folderNameTag
         Association folderTagAssoc = dm4.getAssociation("dm4.core.association", defaultPlayer1.getId(), defaultPlayer2.getId(),
-            "dm4.core.default", "dm4.core.default");
+            "dm4.core.parent", "dm4.core.child");
         if (folderTagAssoc == null) {
             // 4) Create assoc from webResource to folderNameTag
             folderTagAssoc = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
-                mf.newTopicRoleModel(defaultPlayer1.getId(), "dm4.core.default"),
-                mf.newTopicRoleModel(defaultPlayer2.getId(), "dm4.core.default")));
-            log.info("NEW relation from \"" + defaultPlayer2.getTypeUri() + "\" created to \"" + defaultPlayer1.getTypeUri()+ "\"");
+                mf.newTopicRoleModel(defaultPlayer1.getId(), "dm4.core.parent"),
+                mf.newTopicRoleModel(defaultPlayer2.getId(), "dm4.core.child")));
+            log.info("NEW relation from \"" + defaultPlayer1.getTypeUri() + "\" created to \"" + defaultPlayer2.getTypeUri()+ "\"");
         }
         return folderTagAssoc;
     }
 
-    private Topic createNewWebResourceTopic(String url, String description, long created, long modified) {
+    private Topic getOrCreateWebResource(String url, String description, long created, long modified) {
         // 1) Check if a Web Resource Topic with that URL already exists
         Topic webResource;
         try {
