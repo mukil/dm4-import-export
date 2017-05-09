@@ -30,6 +30,11 @@
             <artifactId>deepamehta-files</artifactId>
             <version>4.8</version>
         </dependency>
+        <dependency>
+            <groupId>de.deepamehta</groupId>
+            <artifactId>dm48-tags</artifactId>
+            <version>1.3.10</version>
+        </dependency>
     </dependencies>
 
     <build>

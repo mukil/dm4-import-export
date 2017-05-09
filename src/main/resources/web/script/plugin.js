@@ -11,8 +11,10 @@ dm4c.add_plugin("net.abriraqui.import-export", function() {
 
         function open_bookmarks_dialog() {
             var dialogBody = $('<div class="message">').html("Here you can import a <em>file backup</em> of your Firefox bookmarks. "
-                + "The file must be a file ending on \".json\" and you can generate yours via the <em>Bookmark Manager</em> in Firefox. Importing bookmarks from a Firefox HTML Export are not yet supported."
-                + "<br/><br/><span class=\"field-label\">Note: The import may take a little while. You can import the same backup file over and over again without needing to worry about "
+                + "The file must be a file ending on \".json\" and you can generate yours via the <em>Bookmark Manager</em> in Firefox. "
+                + "Importing bookmarks from a Firefox HTML Export are not yet supported."
+                + "<br/><br/><span class=\"field-label\">Note: The import may take a little while. You can import the same backup file over "
+                + "and over again without needing to worry about "
                 + "ending up with duplicate entries for the same web resource in your database.</span>")
             settingsDialog = dm4c.ui.dialog({
                 "id": 'bookmark-settings',

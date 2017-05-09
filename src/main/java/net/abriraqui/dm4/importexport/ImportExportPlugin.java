@@ -17,6 +17,7 @@ import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Transactional;
 import de.deepamehta.files.FilesService;
 import de.deepamehta.files.UploadedFile;
+import de.deepamehta.tags.TaggingService;
 import de.deepamehta.topicmaps.TopicmapsService;
 import de.deepamehta.topicmaps.model.TopicmapViewmodel;
 import org.codehaus.jettison.json.JSONArray;
@@ -40,9 +41,11 @@ import java.util.logging.Logger;
 public class ImportExportPlugin extends PluginActivator {
 
     @Inject
-    private TopicmapsService topicmapsService;
+    private TopicmapsService topicmaps;
     @Inject
-    private FilesService filesService;
+    private FilesService file;
+    @Inject
+    private TaggingService tagging;
 
     private Logger log = Logger.getLogger(getClass().getName());
 
@@ -54,11 +57,11 @@ public class ImportExportPlugin extends PluginActivator {
     public Topic exportTopicmapToJSON(@CookieParam("dm4_topicmap_id") long topicmapId) {
         try {
             log.info("Exporting Topicmap JSON ######### " + topicmapId);
-            TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
+            TopicmapViewmodel topicmap = topicmaps.getTopicmap(topicmapId, true);
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
             String jsonFileName = "topicmap-" + topicmapId + ".txt";
-            return filesService.createFile(in, filesService.pathPrefix() + "/" + jsonFileName);
+            return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
             // return filesService.createFile(in, jsonFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export failed", e);
@@ -77,13 +80,13 @@ public class ImportExportPlugin extends PluginActivator {
         try {
             log.info("Exporting Topicmap SVG ######### " + topicmapId);
             // 0) Fetch topicmap data
-            TopicmapViewmodel topicmap = topicmapsService.getTopicmap(topicmapId, true);
+            TopicmapViewmodel topicmap = topicmaps.getTopicmap(topicmapId, true);
             Iterable<TopicViewModel> topics = topicmap.getTopics();
             Iterable<AssociationViewModel> associations = topicmap.getAssociations();
             // 1) Setup default file name of SVG to write to
             String svgFileName = "Exported_Topicmap_" + topicmapId + ".svg";
             // 2) Get DM4 filerepo configuration setting and write to document to root folder
-            String documentPath = filesService.getFile("/") + "/" + svgFileName;
+            String documentPath = file.getFile("/") + "/" + svgFileName;
             // 3) Create SVGWriter
             SVGRenderer svg = new SVGRenderer(documentPath);
             svg.startGroupElement(topicmapId);
@@ -133,7 +136,7 @@ public class ImportExportPlugin extends PluginActivator {
             svg.endElement();
             svg.closeDocument();
             // 7) Create and return new file topic for the exported document
-            return filesService.getFileTopic(filesService.pathPrefix() + "/" + svgFileName);
+            return file.getFileTopic(file.pathPrefix() + "/" + svgFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export Topicmap to SVG failed", e);
         }
@@ -155,7 +158,7 @@ public class ImportExportPlugin extends PluginActivator {
 
             String origTopicmapName = info.getString("value");
             Topic importedTopicmap =
-                    topicmapsService.createTopicmap("Imported Topicmap: " + origTopicmapName
+                    topicmaps.createTopicmap("Imported Topicmap: " + origTopicmapName
                             , "dm4.webclient.default_topicmap_renderer", false);
             long topicmapId = importedTopicmap.getId();
             log.info("###### importedTopicmapId " + topicmapId);
@@ -187,21 +190,22 @@ public class ImportExportPlugin extends PluginActivator {
                     JSONArray entryChilds = entry.getJSONArray("children");
                     for (int k = 0; k < entryChilds.length(); k++) {
                         JSONObject childEntry = entryChilds.getJSONObject(k);
-                        Topic webResource = transformMozillaBookmarkEntry(childEntry, importedNote, null);
+                        Topic webResource = transformMozillaBookmarkEntry(childEntry, importedNote, null, 0);
                         if (webResource != null) webResourcesCreatedCount++;
                     }
                 }
             }
             log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreatedCount + " new web resources ####");
-            return "{\"message\": \"All the bookmarks contained in the backup file were successfully mapped as topics "
-                + "of type <em>Web Resource</em>.<br/><br/>Newly created: "+ webResourcesCreatedCount + "\", \"topic_id\": "+importedNote.getId()+"}";
+            return "{\"message\": \"All the bookmarks contained in the backup file were successfully mapped to "
+                + "<em>Web Resources</em>.<br/><br/>Newly created: "+ webResourcesCreatedCount + "\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
         }
     }
 
-    private Topic transformMozillaBookmarkEntry(JSONObject childEntry, Topic importedNote, Topic folderNameTag) {
+    private Topic transformMozillaBookmarkEntry(JSONObject childEntry, Topic importedNote, Topic folderNameTag, int levelCount) {
         Topic webResource = null;
+        int recursionCount = levelCount;
         try {
             String entryType = childEntry.getString("type");
             if (entryType.equals("text/x-moz-place")) {
@@ -218,24 +222,24 @@ public class ImportExportPlugin extends PluginActivator {
                     log.warning("Skipping Bookmark entry due to missing Title or URL, " + childEntry.toString());
                 }
             } else if (entryType.equals("text/x-moz-place-container")) {
-                log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags - NOT YET IMPLEMENTED");
-                // 0) Check if (folderNameTag != null)
-                // 0.1 (Associate new sub-tag with folderNameTag)
-                String folderName = childEntry.getString("title"); // ### use dm4-tags module
-                // 1) Create Tag Item
+                log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags...");
+                // 1) Get or create folderName tag topic
+                String folderName = childEntry.getString("title");
+                Topic folderTopic = tagging.getTagTopic(folderName, false);
+                if (folderTopic == null) {
+                    // 1.1) Create new Tag Item
+                    folderTopic = tagging.createTagTopic(folderName, "Firefox Bookmarks Folder Name", false);
+                    // 1.2) Create association between current tag and parent tag (if given)
+                    getOrCreateSimpleAssoc(folderNameTag, folderTopic);
+                }
                 JSONArray entryChildsChilds = childEntry.getJSONArray("children");
-                log.info("  2ndLevel Bookmark Folder " + folderName + " - TODO: Transform \""+folderName+"\" into TAG");
-                // 2) Process all entry and associate them with this tag
+                log.info("  "+recursionCount+ "ndLevel Bookmark Folder " + folderName + " - TODO: Transform \""+folderName+"\" into TAG");
+                // 2.0) If entry is of type bookmark, create a tag for it, associate it with the parent tag and then
+                    // go over all its children and (recursively) call transformMozillaBookmarkEntry on them
                 for (int m = 0; m < entryChildsChilds.length(); m++) {
-                    // 2.1) If entry is of type bookmark, create a tag for it, associate it with the parent tag and then
-                    // go over all its children and (recursively) call transformMozillaBookmarkEntry for them, too!
+                    recursionCount++;
                     JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
-                    if (childChildEntry.has("title")) {
-                        log.info("      3rdLevel Title: " + childChildEntry.getString("title"));
-                    }
-                    if (childChildEntry.has("uri")) {
-                        log.info("      3rdLevel URL: " + childChildEntry.getString("uri"));
-                    }
+                    transformMozillaBookmarkEntry(childChildEntry, importedNote, folderTopic, recursionCount);
                 }
             }
         } catch (JSONException ex) {
@@ -282,15 +286,34 @@ public class ImportExportPlugin extends PluginActivator {
         return importerNote;
     }
 
-    private Association createBookmarkRelations(Topic importerNote, Topic webResourceNote, Topic folderNameTag) {
+    private Association createBookmarkRelations(Topic importerNote, Topic webResource, Topic folderNameTag) {
         // 1) TODO: Check if association to "importerNote" exists
         // 2) Create association to "importerNote" exists
-        Association imported = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
-            mf.newTopicRoleModel(importerNote.getId(), "dm4.core.default"),
-            mf.newTopicRoleModel(webResourceNote.getId(), "dm4.core.default")));
-        // 3) TODO; Check and create assoc to folderNameTag
-        // 4) Create assoc from webResource to folderNameTag
-        return imported;
+        Association importedAssoc = dm4.getAssociation("dm4.core.association", importerNote.getId(), webResource.getId(),
+            "dm4.core.default", "dm4.core.default");
+        if (importedAssoc == null) {
+            importedAssoc = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
+                mf.newTopicRoleModel(importerNote.getId(), "dm4.core.default"),
+                mf.newTopicRoleModel(webResource.getId(), "dm4.core.default")));
+        }
+        if (folderNameTag != null) {
+            getOrCreateSimpleAssoc(webResource, folderNameTag);
+        }
+        return importedAssoc;
+    }
+
+    private Association getOrCreateSimpleAssoc(Topic defaultPlayer1, Topic defaultPlayer2) {
+        // 3) Check and create assoc to folderNameTag
+        Association folderTagAssoc = dm4.getAssociation("dm4.core.association", defaultPlayer1.getId(), defaultPlayer2.getId(),
+            "dm4.core.default", "dm4.core.default");
+        if (folderTagAssoc == null) {
+            // 4) Create assoc from webResource to folderNameTag
+            folderTagAssoc = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
+                mf.newTopicRoleModel(defaultPlayer1.getId(), "dm4.core.default"),
+                mf.newTopicRoleModel(defaultPlayer2.getId(), "dm4.core.default")));
+            log.info("NEW relation from \"" + defaultPlayer2.getTypeUri() + "\" created to \"" + defaultPlayer1.getTypeUri()+ "\"");
+        }
+        return folderTagAssoc;
     }
 
     private Topic createNewWebResourceTopic(String url, String description, long created, long modified) {
@@ -300,7 +323,9 @@ public class ImportExportPlugin extends PluginActivator {
             webResource = dm4.getTopicByValue("dm4.webbrowser.url", new SimpleValue(url));
             if (webResource != null) {
                 log.info("### Web Resource \""+url+"\" EXISTS - NOT UPDATED");
-                return webResource;
+                Topic webRsrcParent = webResource.getRelatedTopic("dm4.core.composition", "dm4.core.child", "dm4.core.parent",
+                    "dm4.webbrowser.web_resource");
+                return (webRsrcParent != null) ? webRsrcParent : webResource;
             }
         } catch (RuntimeException re) {
             // This could be an AccessControlExcception or a runtime exception pointing at ambiguity of a
@@ -401,7 +426,7 @@ public class ImportExportPlugin extends PluginActivator {
         Topic newTopic = dm4.createTopic(model);
         long topicId = newTopic.getId();
         mapTopicIds.put(origTopicId, topicId);
-        topicmapsService.addTopicToTopicmap(topicmapId, topicId, viewProps);
+        topicmaps.addTopicToTopicmap(topicmapId, topicId, viewProps);
     }
 
     private void createAssociation(JSONObject association, Map<Long, Long> mapTopicIds, long topicmapId) {
@@ -412,7 +437,7 @@ public class ImportExportPlugin extends PluginActivator {
         role2.setPlayerId(mapTopicIds.get(role2.getPlayerId()));
         Association newAssociation = dm4.createAssociation(assocModel);
         long assocId = newAssociation.getId();
-        topicmapsService.addAssociationToTopicmap(topicmapId, assocId);
+        topicmaps.addAssociationToTopicmap(topicmapId, assocId);
     }
 
 }
