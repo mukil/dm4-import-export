@@ -179,48 +179,69 @@ public class ImportExportPlugin extends PluginActivator {
             JSONObject fileContent = new JSONObject(json);
             JSONArray firstChildren = fileContent.getJSONArray("children");
             log.info("###### Starting to map Firefox Bookmark Backup Entries to DeepaMehta 4 Web Resources ######");
-            Topic importNote = createNoteImportTopic(file.getName());
-            int webResourcesCreated = 0;
+            Topic importedNote = createNoteImportTopic(file.getName());
+            int webResourcesCreatedCount = 0;
             for (int i = 0; i < firstChildren.length(); i++) {
                 JSONObject entry = firstChildren.getJSONObject(i);
                 if (entry.has("children")) {
                     JSONArray entryChilds = entry.getJSONArray("children");
                     for (int k = 0; k < entryChilds.length(); k++) {
                         JSONObject childEntry = entryChilds.getJSONObject(k);
-                        String entryType = childEntry.getString("type");
-                        if (entryType.equals("text/x-moz-place")) {
-                            if (childEntry.has("title") && childEntry.has("uri")) {
-                                Topic webResource = transformResourceEntry(childEntry);
-                                if (webResource != null) {
-                                    webResourcesCreated++;
-                                    createSimpleAssociation(importNote, webResource);
-                                }
-                            } else {
-                                log.warning("Skipping Bookmark entry due to missing Title or URL, " + childEntry.toString());
-                            }
-                        } else if (entryType.equals("text/x-moz-place-container")) {
-                            log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags - NOT YET IMPLEMENTED");
-                            String folderName = childEntry.getString("title"); // ### use dm4-tags module
-                            /** JSONArray entryChildsChilds = childEntry.getJSONArray("children");
-                             * for (int m = 0; m < entryChildsChilds.length(); m++) {
-                             * JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
-                             * if (childChildEntry.has("title")) {
-                             * log.info("      3rdLevel Title: " + childChildEntry.getString("title"));
-                             * }
-                             * if (childChildEntry.has("uri")) {
-                             * log.info("      3rdLevel URL: " + childChildEntry.getString("uri"));
-                             * }
-                             * } **/
-                        }
+                        Topic webResource = transformMozillaBookmarkEntry(childEntry, importedNote, null);
+                        if (webResource != null) webResourcesCreatedCount++;
                     }
                 }
             }
-            log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreated + " new web resources ####");
+            log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreatedCount + " new web resources ####");
             return "{\"message\": \"All the bookmarks contained in the backup file were successfully mapped as topics "
-                + "of type <em>Web Resource</em>.<br/><br/>Newly created: "+ webResourcesCreated + "\", \"topic_id\": "+importNote.getId()+"}";
+                + "of type <em>Web Resource</em>.<br/><br/>Newly created: "+ webResourcesCreatedCount + "\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
         }
+    }
+
+    private Topic transformMozillaBookmarkEntry(JSONObject childEntry, Topic importedNote, Topic folderNameTag) {
+        Topic webResource = null;
+        try {
+            String entryType = childEntry.getString("type");
+            if (entryType.equals("text/x-moz-place")) {
+                // Check if (folderNameTag != null), associate item with tag too
+                if (childEntry.has("title") && childEntry.has("uri")) {
+                    webResource = transformResourceEntry(childEntry);
+                    if (webResource != null) { // Topic was either fetched or newly created succcesfully
+                        createBookmarkRelations(importedNote, webResource, folderNameTag);
+                    } else {
+                        // An exception has occured.
+                        log.warning("Web Resource Entry could not be created with JSONObject: " + childEntry.toString());
+                    }
+                } else {
+                    log.warning("Skipping Bookmark entry due to missing Title or URL, " + childEntry.toString());
+                }
+            } else if (entryType.equals("text/x-moz-place-container")) {
+                log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags - NOT YET IMPLEMENTED");
+                // 0) Check if (folderNameTag != null)
+                // 0.1 (Associate new sub-tag with folderNameTag)
+                String folderName = childEntry.getString("title"); // ### use dm4-tags module
+                // 1) Create Tag Item
+                JSONArray entryChildsChilds = childEntry.getJSONArray("children");
+                log.info("  2ndLevel Bookmark Folder " + folderName + " - TODO: Transform \""+folderName+"\" into TAG");
+                // 2) Process all entry and associate them with this tag
+                for (int m = 0; m < entryChildsChilds.length(); m++) {
+                    // 2.1) If entry is of type bookmark, create a tag for it, associate it with the parent tag and then
+                    // go over all its children and (recursively) call transformMozillaBookmarkEntry for them, too!
+                    JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
+                    if (childChildEntry.has("title")) {
+                        log.info("      3rdLevel Title: " + childChildEntry.getString("title"));
+                    }
+                    if (childChildEntry.has("uri")) {
+                        log.info("      3rdLevel URL: " + childChildEntry.getString("uri"));
+                    }
+                }
+            }
+        } catch (JSONException ex) {
+            Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return webResource;
     }
 
     private Topic transformResourceEntry(JSONObject childEntry) {
@@ -261,10 +282,15 @@ public class ImportExportPlugin extends PluginActivator {
         return importerNote;
     }
 
-    private Association createSimpleAssociation(Topic importerNote, Topic webResourceNote) {
-        return dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
+    private Association createBookmarkRelations(Topic importerNote, Topic webResourceNote, Topic folderNameTag) {
+        // 1) TODO: Check if association to "importerNote" exists
+        // 2) Create association to "importerNote" exists
+        Association imported = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
             mf.newTopicRoleModel(importerNote.getId(), "dm4.core.default"),
             mf.newTopicRoleModel(webResourceNote.getId(), "dm4.core.default")));
+        // 3) TODO; Check and create assoc to folderNameTag
+        // 4) Create assoc from webResource to folderNameTag
+        return imported;
     }
 
     private Topic createNewWebResourceTopic(String url, String description, long created, long modified) {
@@ -274,7 +300,7 @@ public class ImportExportPlugin extends PluginActivator {
             webResource = dm4.getTopicByValue("dm4.webbrowser.url", new SimpleValue(url));
             if (webResource != null) {
                 log.info("### Web Resource \""+url+"\" EXISTS - NOT UPDATED");
-                return null;
+                return webResource;
             }
         } catch (RuntimeException re) {
             // This could be an AccessControlExcception or a runtime exception pointing at ambiguity of a
