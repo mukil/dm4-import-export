@@ -32,9 +32,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 @Path("/import-export")
 @Produces("application/json")
@@ -48,6 +53,9 @@ public class ImportExportPlugin extends PluginActivator {
     private TaggingService tagging;
 
     private Logger log = Logger.getLogger(getClass().getName());
+
+    private static final String DM4_TIME_CREATED = "dm4.time.created";
+    private static final String DM4_TIME_MODIFIED = "dm4.time.modified";
 
     // Service implementation //
 
@@ -203,6 +211,40 @@ public class ImportExportPlugin extends PluginActivator {
         }
     }
 
+    @POST
+    @Path("/import/bookmarks/chromium")
+    @Transactional
+    @Consumes("multipart/form-data")
+    public String importChromiumBookmarks(UploadedFile file) {
+        try {
+            String htmlString = file.getString("UTF-8");
+            Document doc = Jsoup.parse(htmlString);
+            Elements folderNames = doc.getElementsByTag("dt");
+            log.info("###### Starting to map Chromium Bookmark HTML Export to DeepaMehta 4 Web Resources ######");
+            int webResourcesCreatedCount = 0;
+            int levelCount = 1;
+            Topic importedNote = createNoteImportTopic(file.getName());
+            log.info("### Iterating " + folderNames.size() + " chromium bookmark entries (flattened).");
+            if (folderNames.size() > 0) {
+                Element dummyEntry = folderNames.get(0);
+                log.info("Root Node " + dummyEntry.nodeName() + " Name: " + dummyEntry.ownText());
+                // ### Create Tag Topic for Root Node..
+                List<Element> nodes = dummyEntry.children();
+                for (Element element : nodes) {
+                    transformChromiumResourceEntry(importedNote, element, null);
+                }
+            }
+            return "{\"message\": \"No bookmarks contained in the backup file were successfully mapped to "
+                + "<em>Web Resources</em>. <br/><br/>Newly created: "+ webResourcesCreatedCount + "\"}";//, \"topic_id\": "+importedNote.getId()+"}";
+        } catch (Exception e) {
+            throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
+        }
+    }
+
+
+
+    // --- Private Importer Helper Methods ---
+
     private Topic transformMozillaBookmarkEntry(JSONObject childEntry, Topic importedNote, Topic folderNameTag, int levelCount) {
         Topic webResource = null;
         int recursionCount = levelCount;
@@ -211,7 +253,7 @@ public class ImportExportPlugin extends PluginActivator {
             if (entryType.equals("text/x-moz-place")) {
                 // Check if (folderNameTag != null), associate item with tag too
                 if (childEntry.has("title") && childEntry.has("uri")) {
-                    webResource = transformResourceEntry(childEntry);
+                    webResource = transformFirefoxResourceEntry(childEntry);
                     if (webResource != null) { // Topic was either fetched or newly created succcesfully
                         createBookmarkRelations(importedNote, webResource, folderNameTag);
                     } else {
@@ -225,10 +267,10 @@ public class ImportExportPlugin extends PluginActivator {
                 log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags...");
                 // 1) Get or create folderName tag topic
                 String folderName = childEntry.getString("title");
-                Topic folderTopic = tagging.getTagTopic(folderName, false);
+                Topic folderTopic = tagging.getTagTopic(folderName, true);
                 if (folderTopic == null) {
                     // 1.1) Create new Tag Item
-                    folderTopic = tagging.createTagTopic(folderName, "Firefox Bookmarks Folder Name", false);
+                    folderTopic = tagging.createTagTopic(folderName, "Imported Firefox Bookmarks Folder Name", true);
                     if (folderNameTag != null) {
                         // 1.2) Create association between current tag and parent tag (if given)
                         getOrCreateSimpleAssoc(folderNameTag, folderTopic);
@@ -250,7 +292,7 @@ public class ImportExportPlugin extends PluginActivator {
         return webResource;
     }
 
-    private Topic transformResourceEntry(JSONObject childEntry) {
+    private Topic transformFirefoxResourceEntry(JSONObject childEntry) {
         try {
             String bookmarkDescription = childEntry.getString("title");
             String bookmarkUrl = childEntry.getString("uri");
@@ -277,9 +319,66 @@ public class ImportExportPlugin extends PluginActivator {
         }
     }
 
+    private void transformChromiumResourceEntry(Topic importedNote, Element element, Topic toBeRelated) {
+        if (element.nodeName().equals("a")) {
+            String linkHref = element.attr("href");
+            String linkName = element.text();
+            String linkAddedValue = element.attr("add_date");
+            String linkModifiedValue = element.attr("last_modified");
+            long linkAdded = new Date().getTime();
+            long linkModified = new Date().getTime();
+            if (!linkAddedValue.isEmpty()) {
+                linkAdded = Long.parseLong(linkAddedValue)*1000;
+            }
+            if (!linkModifiedValue.isEmpty()) {
+                linkModified = Long.parseLong(linkModifiedValue)*1000;
+            }
+            /* String associatedWithMessage = (toBeRelated != null) ? ", Associate with : " + toBeRelated.getSimpleValue() + "" : "";
+            log.info("### Processing chromium link entry  \"" + linkName + "\" (" + linkHref + "), Added: "
+                + new Date(linkAdded*1000).toLocaleString() + associatedWithMessage); **/
+            Topic webResource = getOrCreateWebResource(linkHref, linkName, (linkAdded*1000), linkModified);
+            createBookmarkRelations(importedNote, webResource, toBeRelated);
+        } else if (element.nodeName().equals("h3")) {
+            String text = element.ownText().trim();
+            long folderAdded = Long.parseLong(element.attr("add_date"));
+            String linkModifiedValue = element.attr("last_modified");
+            long folderModified = new Date().getTime();
+            if (!linkModifiedValue.isEmpty()) {
+                folderModified = Long.parseLong(linkModifiedValue);
+            }
+            log.info("### Processing chromium bookmark folder element named \"" + text + "\"");
+            Topic tag = tagging.getTagTopic(text, true);
+            if (tag == null) {
+                tag = tagging.createTagTopic(text, "Imported Chromium Bookmark Folder Name", false);
+                tag.setProperty(DM4_TIME_CREATED, folderAdded, true);
+                if (folderModified != 0) {
+                    tag.setProperty(DM4_TIME_MODIFIED, folderModified, true);
+                }
+                log.info("NEW tag \""+text+"\" created during import");
+            }
+            // mirror bookmark folder hierarchy through a simply tag to tag association
+            if (toBeRelated != null) {
+                getOrCreateSimpleAssoc(toBeRelated, tag);
+            }
+            // associate tag with imported note
+            if (importedNote != null && tag != null) {
+                getOrCreateSimpleAssoc(importedNote, tag);
+            }
+            transformChromiumResourceEntry(importedNote, element.nextElementSibling(), tag);
+        } else if (element.nodeName().equals("dt") || element.nodeName().equals("dl")) {
+            List<Element> childNodes = element.children();
+            log.info("### Processing chromium list element with name " + element.nodeName() + " and "+childNodes.size()+" childs");
+            for (Element childNode : childNodes) {
+                transformChromiumResourceEntry(importedNote, childNode, toBeRelated);
+            }
+        }
+    }
+
+    // --- Private Utilty Methods ---
+
     private Topic createNoteImportTopic(String fileName) {
         ChildTopicsModel childValues = mf.newChildTopicsModel();
-        childValues.put("dm4.notes.title", "Firefox Bookmarks Backup Import, " + fileName);
+        childValues.put("dm4.notes.title", "Browser Bookmarks Import, " + fileName);
         childValues.put("dm4.notes.text", "This note relates web resources created through an import process, namely the Firefox Bookmark Backup File "
             + "(" + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
             + "web resources you imported when and from which backup file they originated from.");
@@ -289,14 +388,17 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private Association createBookmarkRelations(Topic importerNote, Topic webResource, Topic folderNameTag) {
-        // 1) TODO: Check if association to "importerNote" exists
-        // 2) Create association to "importerNote" exists
-        Association importedAssoc = dm4.getAssociation("dm4.core.association", importerNote.getId(), webResource.getId(),
-            "dm4.core.default", "dm4.core.default");
-        if (importedAssoc == null) {
-            importedAssoc = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
-                mf.newTopicRoleModel(importerNote.getId(), "dm4.core.default"),
-                mf.newTopicRoleModel(webResource.getId(), "dm4.core.default")));
+        Association importedAssoc = null;
+        if (importerNote != null) {
+            // 1) Check if association to "importerNote" exists
+            importedAssoc = dm4.getAssociation("dm4.core.association", importerNote.getId(), webResource.getId(),
+                "dm4.core.default", "dm4.core.default");
+            if (importedAssoc == null) {
+                // 2) Create association to "importerNote" exists
+                importedAssoc = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
+                    mf.newTopicRoleModel(importerNote.getId(), "dm4.core.default"),
+                    mf.newTopicRoleModel(webResource.getId(), "dm4.core.default")));
+            }
         }
         if (folderNameTag != null) {
             getOrCreateSimpleAssoc(folderNameTag, webResource); // choosing to set the tag as parent
@@ -342,7 +444,7 @@ public class ImportExportPlugin extends PluginActivator {
         childValues.put("dm4.webbrowser.url", url);
         childValues.put("dm4.webbrowser.web_resource_description", description);
         webResource = dm4.createTopic(mf.newTopicModel("dm4.webbrowser.web_resource", childValues));
-        if (created != 0) webResource.setProperty("dm4.time.created", created, true);
+        if (created != 0) webResource.setProperty(DM4_TIME_CREATED, created, true);
         // lastModified is anyway overwritten by dm4-times plugin as (i guess) setting the timepropery is an udpate
         if (modified != 0) webResource.setProperty("dm4.time.modified", modified, true);
         log.info("### Web Resource \""+url+"\" CREATED");
