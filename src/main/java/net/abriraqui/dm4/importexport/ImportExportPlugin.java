@@ -30,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +57,12 @@ public class ImportExportPlugin extends PluginActivator {
 
     private static final String DM4_TIME_CREATED = "dm4.time.created";
     private static final String DM4_TIME_MODIFIED = "dm4.time.modified";
+
+    // Zotero Report Column Header Names seem to be internationalized...
+    private static final String ZOTERO_ENTRY_TYPE_COLUMN_KEY = "Typ";
+    private static final String ZOTERO_ENTRY_URL_COLUMN_KEY = "URL";
+    private static final String ZOTERO_MODIFIED_AT_COLUMN_KEY = "Geändert am";
+    private static final String ZOTERO_ADDED_AT_COLUMN_KEY = "Hinzugefügt am";
 
     // Service implementation //
 
@@ -207,7 +214,7 @@ public class ImportExportPlugin extends PluginActivator {
             return "{\"message\": \"All valid bookmarks contained in the Firefox backup file were successfully mapped to "
                 + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
-            throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
+            throw new RuntimeException("Importing Web Resources from Firefox Bookmarks Backup FAILED", e);
         }
     }
 
@@ -234,11 +241,32 @@ public class ImportExportPlugin extends PluginActivator {
             return "{\"message\": \"All valid chromium bookmark entries contained in the backup file were successfully mapped to "
                 + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
-            throw new RuntimeException("Importing Chromium Bookmarks FAILED", e);
+            throw new RuntimeException("Importing Web Resources from Chromium Bookmarks file FAILED", e);
         }
     }
 
-
+    @POST
+    @Path("/import/bookmarks/zotero-report")
+    @Transactional
+    @Consumes("multipart/form-data")
+    public String importZoteroReportBookmarks(UploadedFile file) {
+        try {
+            String htmlString = file.getString("UTF-8");
+            Document doc = Jsoup.parse(htmlString);
+            Elements webpages = doc.getElementsByClass("webpage");
+            log.info("###### Starting to map Zotero Report Bookmarks to DeepaMehta 4 Web Resources ######");
+            Topic importedNote = createNoteImportTopic(file.getName());
+            log.info("### Iterating " + webpages.size() + " webpages in zotero report.");
+            for (Element webpage : webpages) {
+                transformZoteroWebpageEntry(importedNote, webpage);
+            }
+            log.info("#### Mapping Zotero Report Bookmarks to Web Resources COMPLETED ####");
+            return "{\"message\": \"All valid webpages in the zotero report file were successfully mapped to "
+                + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
+        } catch (Exception e) {
+            throw new RuntimeException("Importing Web Resources from Zotero Report Bookmarks file FAILED", e);
+        }
+    }
 
     // --- Private Importer Transformation Methods ---
 
@@ -371,6 +399,87 @@ public class ImportExportPlugin extends PluginActivator {
         }
     }
 
+    private Topic transformZoteroWebpageEntry(Topic importedNote, Element listItem) {
+        // 0) Declare parsers goal
+        String webpageTitle = null, webpageUrl = null, entryType = null;
+        long bookmarkCreated = new Date().getTime();
+        long bookmarkModified = new Date().getTime();
+        Topic webpage = null;
+        // 1) Collect Entry Name
+        List<Element> childs = listItem.children();
+        for (Element element : childs) {
+            if (element.nodeName().equals("h2")) {
+                String text = element.ownText().trim();
+                webpageTitle = text;
+                log.info("### Processed zotero report webpage title \"" + text + "\"");
+            }
+        }
+        // 2) Collect tags of an entry
+        List<String> bookmarkTags = new ArrayList<String>();
+        List<Element> tagElements = listItem.getElementsByClass("tags");
+        for (Element tagElement : tagElements) {
+            if (tagElement.nodeName().equals("ul")) {
+                List<Element> tagEntries = tagElement.getElementsByTag("li");
+                for (Element tagEntry : tagEntries) {
+                    bookmarkTags.add(tagEntry.ownText().trim());
+                }
+            }
+        }
+        // 3) Collect attribute values of an entry
+        List<Element> attributes = listItem.getElementsByTag("tr");
+        for (Element attribute : attributes) { // each tr stands for an attribute and has exactly 1 th and 1 td
+            Element keyCell = attribute.child(0); // th
+            Element valueCell = attribute.child(1); // td
+            String keyOne = keyCell.ownText().trim();
+            if (keyOne.equals(ZOTERO_ENTRY_URL_COLUMN_KEY)) {
+                List<Element> ahrefs = valueCell.getElementsByTag("a");
+                if (ahrefs.size() > 0) {
+                    webpageUrl = ahrefs.get(0).attr("href");
+                    log.fine("### Parsed zotero report webpage URL: " + webpageUrl);
+                }
+            } else if (keyOne.equals(ZOTERO_ENTRY_TYPE_COLUMN_KEY)) {
+                entryType = valueCell.ownText();
+                // log.info("### Skipped zotero report entry of type: \"" + entryType + "\"");
+            } else if (keyOne.equals(ZOTERO_ADDED_AT_COLUMN_KEY)) {
+                String entryAdded = valueCell.ownText();
+                if (!entryAdded.isEmpty()) {
+                    try {
+                        bookmarkCreated = new Date().parse(entryAdded);
+                    } catch (IllegalArgumentException iex) {
+                        log.warning("Could not parse date of bookmark created \"" + entryAdded + "\", cause " + iex.getMessage());
+                    }
+                }
+            } else if (keyOne.equals(ZOTERO_MODIFIED_AT_COLUMN_KEY)) {
+                String entryModified = valueCell.ownText();
+                if (!entryModified.isEmpty()) {
+                    try {
+                        bookmarkModified = new Date().parse(entryModified);
+                    } catch (IllegalArgumentException iex) {
+                        log.warning("Could not parse date of bookmark last modified \"" + entryModified + "\", cause " + iex.getMessage());
+                    }
+                }
+            }
+        }
+        // We import anything that has _some value_ in the URL column
+        if (webpageUrl != null) {
+            webpage = getOrCreateWebResource(webpageUrl, webpageTitle + "<br/>" + entryType, bookmarkCreated, bookmarkModified);
+            if (bookmarkTags.size() > 0) {
+                log.fine("### Importing " + bookmarkTags + " as tags for this webpage from zotero report");
+            }
+            for (String tagValue : bookmarkTags) {
+                Topic tag = tagging.getTagTopic(tagValue, true);
+                if (tag == null) {
+                    tag = tagging.createTagTopic(tagValue, "Imported Zotero Report Webpage Tag", false);
+                    log.info("NEW tag \""+tagValue+"\" created during import");
+                }
+                if (tag != null) {
+                    createBookmarkRelations(importedNote, webpage, tag);
+                }
+            }
+        }
+        return webpage;
+    }
+
     // --- Private Utilty Methods ---
 
     private Topic createNoteImportTopic(String fileName) {
@@ -421,7 +530,7 @@ public class ImportExportPlugin extends PluginActivator {
         // 1) Check if a Web Resource Topic with that URL already exists
         Topic webResource;
         try {
-            webResource = dm4.getTopicByValue("dm4.webbrowser.url", new SimpleValue(url));
+            webResource = dm4.getTopicByValue("dm4.webbrowser.url", new SimpleValue(url.trim()));
             if (webResource != null) {
                 log.info("### Web Resource \""+url+"\" EXISTS - NOT UPDATED");
                 Topic webRsrcParent = webResource.getRelatedTopic("dm4.core.composition", "dm4.core.child", "dm4.core.parent",
@@ -434,11 +543,11 @@ public class ImportExportPlugin extends PluginActivator {
             // In any way, we cannot do any thing more about the circumstances which lead us here but noting them.
             log.warning("Web Resource could not be created, either due to an access control issue or a "
                 + "messed up lucene KEY index (allowing web resources to exists just once in a DB), caused by: "
-                + re.getCause().getLocalizedMessage());
+                + re.getLocalizedMessage());
         }
         // 2) Create new Web Resource Topic
         ChildTopicsModel childValues = mf.newChildTopicsModel();
-        childValues.put("dm4.webbrowser.url", url);
+        childValues.put("dm4.webbrowser.url", url.trim());
         childValues.put("dm4.webbrowser.web_resource_description", description);
         webResource = dm4.createTopic(mf.newTopicModel("dm4.webbrowser.web_resource", childValues));
         if (created != 0) webResource.setProperty(DM4_TIME_CREATED, created, true);

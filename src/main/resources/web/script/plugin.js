@@ -3,6 +3,7 @@ dm4c.add_plugin("net.abriraqui.import-export", function() {
 
     var CHROMIUM_ENDPOINT = "/import-export/import/bookmarks/chromium"
     var FIREFOX_ENDPOINT = "/import-export/import/bookmarks/firefox"
+    var ZOTERO_ENDPOINT = "/import-export/import/bookmarks/zotero-report"
 
     var selectedEndpoint = FIREFOX_ENDPOINT
 
@@ -37,14 +38,17 @@ dm4c.add_plugin("net.abriraqui.import-export", function() {
             // handler for the select menu function'(get an output for an option)
             // 1) Create Browser vendor selection menu ...
             var $browserSelect = $("<select id='vendor' class='ui select'>")
-                $browserSelect.append("<option value='firefox'>Mozilla Firefox</option>")
                 $browserSelect.append("<option value='chromium'>Chromium</option>")
+                $browserSelect.append("<option value='firefox' selected>Mozilla Firefox</option>")
+                $browserSelect.append("<option value='zotero'>Zotero Report Webpages</option>")
                 $browserSelect.on('change', function(e) {
                     var selectMenu = $browserSelect[0]
                     if (selectMenu.value === "firefox") {
                         selectedEndpoint = FIREFOX_ENDPOINT
                     } else if (selectMenu.value === "chromium") {
                         selectedEndpoint = CHROMIUM_ENDPOINT
+                    } else if (selectMenu.value === "zotero") {
+                        selectedEndpoint = ZOTERO_ENDPOINT
                     }
                 })
             // 2) Hook browser vendor selection menu into our modal dialog
