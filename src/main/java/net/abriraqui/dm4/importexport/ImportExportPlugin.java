@@ -221,23 +221,20 @@ public class ImportExportPlugin extends PluginActivator {
             Document doc = Jsoup.parse(htmlString);
             Elements folderNames = doc.getElementsByTag("dt");
             log.info("###### Starting to map Chromium Bookmark HTML Export to DeepaMehta 4 Web Resources ######");
-            int webResourcesCreatedCount = 0;
-            int levelCount = 1;
             Topic importedNote = createNoteImportTopic(file.getName());
             log.info("### Iterating " + folderNames.size() + " chromium bookmark entries (flattened).");
             if (folderNames.size() > 0) {
                 Element dummyEntry = folderNames.get(0);
-                log.info("Root Node " + dummyEntry.nodeName() + " Name: " + dummyEntry.ownText());
-                // ### Create Tag Topic for Root Node..
                 List<Element> nodes = dummyEntry.children();
                 for (Element element : nodes) {
                     transformChromiumResourceEntry(importedNote, element, null);
                 }
             }
-            return "{\"message\": \"No bookmarks contained in the backup file were successfully mapped to "
-                + "<em>Web Resources</em>. <br/><br/>Newly created: "+ webResourcesCreatedCount + "\"}";//, \"topic_id\": "+importedNote.getId()+"}";
+            log.info("#### Mapping Chromium Bookmarks Backup to Web Resources COMPLETED ####");
+            return "{\"message\": \"All valid chromium bookmark entries contained in the backup file were successfully mapped to "
+                + "<em>Web Resources</em>.\"}";
         } catch (Exception e) {
-            throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
+            throw new RuntimeException("Importing Chromium Bookmarks FAILED", e);
         }
     }
 
