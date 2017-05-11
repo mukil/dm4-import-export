@@ -204,8 +204,8 @@ public class ImportExportPlugin extends PluginActivator {
                 }
             }
             log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreatedCount + " new web resources ####");
-            return "{\"message\": \"All the bookmarks contained in the backup file were successfully mapped to "
-                + "<em>Web Resources</em>.<br/><br/>Newly created: "+ webResourcesCreatedCount + "\", \"topic_id\": "+importedNote.getId()+"}";
+            return "{\"message\": \"All valid bookmarks contained in the Firefox backup file were successfully mapped to "
+                + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Firefox Bookmarks FAILED", e);
         }
@@ -232,7 +232,7 @@ public class ImportExportPlugin extends PluginActivator {
             }
             log.info("#### Mapping Chromium Bookmarks Backup to Web Resources COMPLETED ####");
             return "{\"message\": \"All valid chromium bookmark entries contained in the backup file were successfully mapped to "
-                + "<em>Web Resources</em>.\"}";
+                + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Chromium Bookmarks FAILED", e);
         }
@@ -240,7 +240,7 @@ public class ImportExportPlugin extends PluginActivator {
 
 
 
-    // --- Private Importer Helper Methods ---
+    // --- Private Importer Transformation Methods ---
 
     private Topic transformMozillaBookmarkEntry(JSONObject childEntry, Topic importedNote, Topic folderNameTag, int levelCount) {
         Topic webResource = null;
