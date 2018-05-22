@@ -619,7 +619,7 @@ public class ImportExportPlugin extends PluginActivator {
      * distribution. */
     private String typeIconDataUri(String typeUri) throws IOException {
         TopicType topicType = dm4.getTopicType(typeUri);
-        String iconPath = (String) topicType.getViewConfig("dm4.webclient.view_config", "dm4.webclient.icon");
+        String iconPath = (String) topicType.getViewConfigValue("dm4.webclient.view_config", "dm4.webclient.icon");
         InputStream iconIS = null;
         // TODO: Load icons bundled in other plugins
         // String pluginPath = iconPath.substring(1, sep);
