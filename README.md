@@ -41,6 +41,14 @@ Research
 Version History
 ---------------
 
+**0.6**, Apr 27, 2019
+
+- Improved support for importing Firefox (v53.x) Bookmarks (folders are imported as tags)
+- Added dependency to dm4-tags-1.4.0 module
+- Added support for importing Chromium (v53.x) Bookmark backup files
+- Added support for Zotero Bookmarks (v4.x) from HTML Report
+- Compatible with DeepaMehta 4.9.2
+
 **0.5**, 22 Jun 2016
 
 - Added support for importing bookmarks based on _Firefox Bookmark Backup_ documents (.json).
@@ -68,5 +76,5 @@ Authors:
 --------
 
 Carolina Garcia, 2014 [abriraqui.net](http://www.abriraqui.net)
-Malte Reißig, 2015 [mikromedia.de](http://www.mikromedia.de)
+Malte Reißig, 2015-2019 [mikromedia.de](http://www.mikromedia.de)
 

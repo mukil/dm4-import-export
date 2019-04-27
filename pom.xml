@@ -12,11 +12,11 @@
     <parent>
         <groupId>de.deepamehta</groupId>
         <artifactId>deepamehta-plugin</artifactId>
-        <version>4.9.1</version>
+        <version>4.9.2</version>
     </parent>
 
     <!--properties>
-	<dm4.deploy.dir>/home/malted/Downloads/deepamehta-4.8.1/bundle-deploy</dm4.deploy.dir>
+	<dm4.deploy.dir>/Users/malt/source/dm4-platform/bundle-deploy</dm4.deploy.dir>
     </properties-->
 
     <!--properties>
@@ -27,12 +27,17 @@
         <dependency>
             <groupId>de.deepamehta</groupId>
             <artifactId>deepamehta-topicmaps</artifactId>
-            <version>4.9.1</version>
+            <version>4.9.2</version>
         </dependency>
         <dependency>
             <groupId>de.deepamehta</groupId>
             <artifactId>deepamehta-files</artifactId>
-            <version>4.9.1</version>
+            <version>4.9.2</version>
+        </dependency>
+        <dependency>
+            <groupId>de.deepamehta</groupId>
+            <artifactId>deepamehta-workspaces</artifactId>
+            <version>4.9.2</version>
         </dependency>
         <dependency>
             <groupId>de.deepamehta</groupId>
