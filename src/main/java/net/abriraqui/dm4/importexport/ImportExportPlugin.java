@@ -20,6 +20,7 @@ import de.deepamehta.files.UploadedFile;
 import de.deepamehta.tags.TaggingService;
 import de.deepamehta.topicmaps.TopicmapsService;
 import de.deepamehta.topicmaps.model.TopicmapViewmodel;
+import de.deepamehta.workspaces.WorkspacesService;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -33,6 +34,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -52,6 +54,8 @@ public class ImportExportPlugin extends PluginActivator {
     private FilesService file;
     @Inject
     private TaggingService tagging;
+    @Inject
+    private WorkspacesService workspaces;
 
     private Logger log = Logger.getLogger(getClass().getName());
 
@@ -65,6 +69,106 @@ public class ImportExportPlugin extends PluginActivator {
     private static final String ZOTERO_ADDED_AT_COLUMN_KEY = "Hinzugefügt am";
 
     // Service implementation //
+
+    @GET
+    @Transactional
+    @Path("/content/json")
+    public Topic exportTopicsAndAssocsToJSON() {
+        try {
+            log.info("######## Start Exporting ALL Topics and Associations to JSON ######### ");
+            JSONObject json = new JSONObject();
+            json.put("topics", new JSONArray());
+            json.put("associations", new JSONArray());
+            Iterable<Topic> allTopics = dm4.getAllTopics();
+            Iterator<Topic> topics = allTopics.iterator();
+            while (topics.hasNext()) {
+                JSONArray jsonTopics = json.getJSONArray("topics");
+                JSONObject topic = createMinifiedTopicJSON(topics.next());
+                if (topic != null) jsonTopics.put(topic);
+            }
+            Iterable<Association> allAssocs = dm4.getAllAssociations();
+            Iterator<Association> assocs = allAssocs.iterator();
+            while (assocs.hasNext()) {
+                JSONArray jsonAssocs = json.getJSONArray("associations");
+                JSONObject assoc = createMinifiedAssocJSON(assocs.next());
+                if (assoc != null) jsonAssocs.put(assoc);
+            }
+            InputStream in = new ByteArrayInputStream(json.toString().getBytes("UTF-8"));
+            String jsonFileName = "dm4-topics-and-assocs-"+new Date().toString()+".txt";
+            return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
+            // return filesService.createFile(in, jsonFileName);
+        } catch (Exception e) {
+            throw new RuntimeException("Topics and Associations Export failed", e);
+        }
+    }
+
+    private JSONObject createMinifiedTopicJSON(Topic topic) throws JSONException {
+        if (!topic.getUri().isEmpty()) {
+            // Skip exporting all topics with an URI (types)
+            return null;
+        }
+        if (topic.getTypeUri().contains(".webclient")
+            || topic.getTypeUri().contains(".workspaces")
+            || topic.getTypeUri().contains(".include_in_label")
+            || topic.getTypeUri().contains(".datetime")
+            || topic.getTypeUri().contains(".plugin")) {
+            // Skip instances of type webclient, workspace, time or plugin
+            return null;
+        }
+        Topic ws = workspaces.getAssignedWorkspace(topic.getId());
+        String wsName = "";
+        if (ws != null) wsName = ws.getSimpleValue().toString();
+        return new JSONObject()
+                .put("id", topic.getId())
+                .put("typeUri", topic.getTypeUri())
+                .put("value", topic.getSimpleValue())
+                .put("wsName", wsName);
+    }
+
+    private JSONObject createMinifiedAssocJSON(Association assoc) throws JSONException {
+        if (!assoc.getPlayer1().getUri().isEmpty() && !assoc.getPlayer2().getUri().isEmpty()) {
+            // Skip exporting all associations which players have an URI set (types)
+            return null;
+        }
+        if (assoc.getTypeUri().contains("instantiation")
+            || assoc.getPlayer1().getTypeUri().contains(".webclient")
+            || assoc.getPlayer2().getTypeUri().contains(".webclient")
+            || assoc.getPlayer1().getTypeUri().contains(".workspaces")
+            || assoc.getPlayer2().getTypeUri().contains(".workspaces")
+            || assoc.getPlayer1().getTypeUri().contains("include_in_label")
+            || assoc.getPlayer2().getTypeUri().contains("include_in_label")
+            || assoc.getPlayer1().getTypeUri().contains("datetime")
+            || assoc.getPlayer2().getTypeUri().contains("datetime")
+            || assoc.getPlayer1().getTypeUri().contains("plugin")
+            || assoc.getPlayer2().getTypeUri().contains("plugin")
+            || assoc.getPlayer1().getTypeUri().contains("cardinality")
+            || assoc.getPlayer2().getTypeUri().contains("cardinality")
+            || assoc.getPlayer1().getTypeUri().contains("_def")
+            || assoc.getPlayer2().getTypeUri().contains("_def")
+            || assoc.getPlayer1().getTypeUri().contains("topic_type")
+            || assoc.getPlayer2().getTypeUri().contains("topic_type")
+            || assoc.getPlayer1().getTypeUri().contains("assoc_type")
+            || assoc.getPlayer2().getTypeUri().contains("assoc_type")) {
+            // Skip instances of type webclient, workspace, time, plugin
+            // and type related instances
+            return null;
+        }
+        Topic ws = workspaces.getAssignedWorkspace(assoc.getId());
+        String wsName = "";
+        if (ws != null) wsName = ws.getSimpleValue().toString();
+        return new JSONObject()
+                .put("assocTypeUri", assoc.getTypeUri())
+                .put("value", assoc.getSimpleValue())
+                .put("p1TypeUri", assoc.getPlayer1().getTypeUri())
+                .put("p1Id", assoc.getPlayer1().getId())
+                .put("p1", assoc.getPlayer1().getSimpleValue())
+                .put("p1roleTypeUri", assoc.getRole1().getRoleTypeUri())
+                .put("p2TypeUri", assoc.getPlayer2().getTypeUri())
+                .put("p2Id", assoc.getPlayer2().getId())
+                .put("p2", assoc.getPlayer2().getSimpleValue())
+                .put("p2roleTypeUri", assoc.getRole2().getRoleTypeUri())
+                .put("wsName", wsName);
+    }
 
     @POST
     @Transactional
