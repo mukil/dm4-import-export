@@ -15,6 +15,7 @@ import de.deepamehta.core.model.topicmaps.ViewProperties;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Transactional;
+import de.deepamehta.core.service.accesscontrol.AccessControlException;
 import de.deepamehta.files.FilesService;
 import de.deepamehta.files.UploadedFile;
 import de.deepamehta.tags.TaggingService;
@@ -82,23 +83,31 @@ public class ImportExportPlugin extends PluginActivator {
             Iterable<Topic> allTopics = dm4.getAllTopics();
             Iterator<Topic> topics = allTopics.iterator();
             while (topics.hasNext()) {
-                JSONArray jsonTopics = json.getJSONArray("topics");
-                JSONObject topic = createMinifiedTopicJSON(topics.next());
-                if (topic != null) jsonTopics.put(topic);
+                try {
+                    JSONArray jsonTopics = json.getJSONArray("topics");
+                    JSONObject topic = createMinifiedTopicJSON(topics.next());
+                    if (topic != null) jsonTopics.put(topic);
+                } catch (AccessControlException ex) {
+                    log.warning("### Topic read permission denied => " + ex.getLocalizedMessage().toString());
+                }
             }
             Iterable<Association> allAssocs = dm4.getAllAssociations();
             Iterator<Association> assocs = allAssocs.iterator();
             while (assocs.hasNext()) {
-                JSONArray jsonAssocs = json.getJSONArray("associations");
-                JSONObject assoc = createMinifiedAssocJSON(assocs.next());
-                if (assoc != null) jsonAssocs.put(assoc);
+                try {
+                    JSONArray jsonAssocs = json.getJSONArray("associations");
+                    JSONObject assoc = createMinifiedAssocJSON(assocs.next());
+                    if (assoc != null) jsonAssocs.put(assoc);
+                }  catch (AccessControlException ex) {
+                    log.warning("### Association read permission denined => " + ex.getLocalizedMessage().toString());
+                }
             }
             InputStream in = new ByteArrayInputStream(json.toString().getBytes("UTF-8"));
             String jsonFileName = "dm4-topics-and-assocs-"+new Date().toString()+".txt";
             return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
             // return filesService.createFile(in, jsonFileName);
         } catch (Exception e) {
-            throw new RuntimeException("Topics and Associations Export failed", e);
+            throw new RuntimeException("Creating Topics and Associations JSON Export failed", e);
         }
     }
 
