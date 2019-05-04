@@ -131,7 +131,8 @@ public class ImportExportPlugin extends PluginActivator {
                 .put("id", topic.getId())
                 .put("typeUri", topic.getTypeUri())
                 .put("value", topic.getSimpleValue())
-                .put("wsName", wsName);
+                .put("dataType", topic.getType().getDataTypeUri())
+                .put("workspace", wsName);
     }
 
     private JSONObject createMinifiedAssocJSON(Association assoc) throws JSONException {
@@ -167,16 +168,17 @@ public class ImportExportPlugin extends PluginActivator {
         if (ws != null) wsName = ws.getSimpleValue().toString();
         return new JSONObject()
                 .put("assocTypeUri", assoc.getTypeUri())
-                .put("value", assoc.getSimpleValue())
-                .put("p1TypeUri", assoc.getPlayer1().getTypeUri())
-                .put("p1Id", assoc.getPlayer1().getId())
-                .put("p1", assoc.getPlayer1().getSimpleValue())
-                .put("p1roleTypeUri", assoc.getRole1().getRoleTypeUri())
-                .put("p2TypeUri", assoc.getPlayer2().getTypeUri())
-                .put("p2Id", assoc.getPlayer2().getId())
-                .put("p2", assoc.getPlayer2().getSimpleValue())
-                .put("p2roleTypeUri", assoc.getRole2().getRoleTypeUri())
-                .put("wsName", wsName);
+                .put("assocValue", assoc.getSimpleValue())
+                .put("assocDataType", assoc.getType().getDataTypeUri())
+                .put("player1Type", assoc.getPlayer1().getTypeUri())
+                .put("player1Id", assoc.getPlayer1().getId())
+                .put("player1Value", assoc.getPlayer1().getSimpleValue())
+                .put("player1roleType", assoc.getRole1().getRoleTypeUri())
+                .put("player2TypeUri", assoc.getPlayer2().getTypeUri())
+                .put("player2Id", assoc.getPlayer2().getId())
+                .put("player2Value", assoc.getPlayer2().getSimpleValue())
+                .put("player2roleType", assoc.getRole2().getRoleTypeUri())
+                .put("workspace", wsName);
     }
 
     @POST
