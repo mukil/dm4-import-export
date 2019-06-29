@@ -76,34 +76,29 @@ public class ImportExportPlugin extends PluginActivator {
 
     @GET
     @Transactional
-    @Path("/content/json/configured")
+    @Path("/configured/content")
     public Topic exportConfiguredTopicTypes() {
-        String jsonFileName = "dm4-full-configured-types-export-"+new Date().toString()+".txt";
+        String jsonFileName = "dm4-import-export-configured-"+new Date().toString()+".txt";
         InputStream in = null;
         try {
-            log.info("######## Start exporting of all workspaces and topics of all configured types to JSON ######### ");
+            log.info("######## Start exporting topics of all configured topic and assoc types to JSON ######### ");
             JSONObject json = new JSONObject();
-            json.put("workspaces", new JSONArray());
-            Iterable<Topic> allWorksapces = dm4.getTopicsByType("dm4.workspaces.workspace");
-            Iterator<Topic> workspaces = allWorksapces.iterator();
-            while (workspaces.hasNext()) {
-                try {
-                    JSONArray jsonTopics = json.getJSONArray("workspaces");
-                    JSONObject topic = createTopicJSON(workspaces.next());
-                    if (topic != null) jsonTopics.put(topic);
-                } catch (AccessControlException ex) {
-                    log.warning("### Workspace read permission denied => " + ex.getLocalizedMessage().toString());
-                }
-            }
-            // fetch configured topic types
-            Topic plugin = dm4.getTopicByUri("net.abriraqi.import-export");
-            log.info("Loaded " + plugin.getSimpleValue() + " plugin topic for inspecting export type configuration");
-            // Topic plugin = dm4.getTopicByValue("dm4.core.plugin_symbolic_name", new SimpleValue("net.abriraqi.import-export"));
-            List<RelatedTopic> configuredTypes = plugin.getRelatedTopics("dm4.core.association", "dm4.core.default",
-                    "dm4.core.default", "dm4.core.topic_type");
-            // export configured types
+            // 1) fetch all workspace topics
+            addWorkspaceTopicsToExport(json);
+            // 2) fetch configured assoc and topic types to be included in export
+            List<RelatedTopic> configuredTypes = getConfiguredTopicTypesForExport();
+            List<RelatedTopic> configuredAssocTypes = getConfiguredAssocTypesForExport();
+            // 3) export topics and associations of configured topic types
+            json.put("topics", new JSONArray());
             for (RelatedTopic type : configuredTypes) {
-                exportTopicsAndAssocsToJSON(type.getUri(), json);
+                exportTopicsAndAssocsToJSON(type.getUri(), configuredAssocTypes, json);
+            }
+            // 4) export topicmaps topics with their current workspace assignment
+            List<Topic> topicmaps = dm4.getTopicsByType("dm4.topicmaps.topicmap");
+            json.put("topicmaps", new JSONArray());
+            for (Topic topicmap : topicmaps) {
+                log.info("### Exporting topicmap \"" + topicmap.getSimpleValue() + "\" ...");
+                exportTopicmapToJSON(topicmap, json);
             }
             in = new ByteArrayInputStream(json.toString().getBytes("UTF-8"));
         } catch (JSONException ex) {
@@ -111,23 +106,77 @@ public class ImportExportPlugin extends PluginActivator {
         } catch (UnsupportedEncodingException ex) {
             Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
         }
+        // 5) Write export file
         return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
+    }
+
+    private void addWorkspaceTopicsToExport(JSONObject json) {
+        try {
+            json.put("workspaces", new JSONArray());
+            Iterable<Topic> allWorksapces = dm4.getTopicsByType("dm4.workspaces.workspace");
+            Iterator<Topic> workspaces = allWorksapces.iterator();
+            log.info("### Exporting workspace topics ...");
+            while (workspaces.hasNext()) {
+                try {
+                    JSONArray jsonTopics = json.getJSONArray("workspaces");
+                    jsonTopics.put(workspaces.next().toJSON());
+                } catch (AccessControlException ex) {
+                    log.warning("### Workspace read permission denied => " + ex.getLocalizedMessage().toString());
+                }
+            }
+        } catch (JSONException ex) {
+            Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private List<RelatedTopic> getConfiguredTopicTypesForExport() {
+        Topic plugin = dm4.getTopicByUri("net.abriraqi.import-export");
+        log.info("Loaded " + plugin.getSimpleValue() + " plugin topic for inspecting export type configuration");
+        List<RelatedTopic> configuredTypes = plugin.getRelatedTopics("dm4.core.association", "dm4.core.default",
+                "dm4.core.default", "dm4.core.topic_type");
+        return configuredTypes;
+    }
+
+    private List<RelatedTopic> getConfiguredAssocTypesForExport() {
+        Topic plugin = dm4.getTopicByUri("net.abriraqi.import-export");
+        List<RelatedTopic> configuredAssocTypes = plugin.getRelatedTopics("dm4.core.association", "dm4.core.default",
+                "dm4.core.default", "dm4.core.assoc_type");
+        return configuredAssocTypes;
+    }
+
+    private void exportTopicmapToJSON(Topic topicmap, JSONObject json) {
+        try {
+            JSONArray jsonTopics = json.getJSONArray("topicmaps");
+            // fetch topicmap with all children
+            TopicmapViewmodel tmViewModel = topicmaps.getTopicmap(topicmap.getId(), true);
+            // fetch workspace assignment for topicmap
+            Topic ws = workspaces.getAssignedWorkspace(topicmap.getId());
+            ws.loadChildTopics();
+            // add workspace topic to Topicmap JSONObject
+            JSONObject tm = tmViewModel.toJSON();
+            tm.put("workspace", ws.toJSON());
+            // add topicmap + workspace topic to export file
+            jsonTopics.put(tm);
+        } catch (AccessControlException ex) {
+            log.warning("Topicmap read permission denied => " + ex.getLocalizedMessage().toString());
+        } catch (JSONException ex) {
+            Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     @GET
     @Transactional
     @Path("/content/json/{typeUri}")
-    public Topic exportTopicsAndAssocsToJSON(@PathParam("typeUri") String typeUri, JSONObject givenJson) {
+    public Topic exportTopicsAndAssocsToJSON(@PathParam("typeUri") String typeUri, List<RelatedTopic> assocTypes, JSONObject givenJson) {
         try {
-            log.info("######## Start exporting all topics of of type \""+typeUri+"\" to JSON ######### ");
+            log.info("### Exporting topics of type \""+typeUri+"\" with associations ...");
             JSONObject json = (givenJson != null) ? givenJson : new JSONObject();
-            json.put("topics", new JSONArray());
             Iterable<Topic> allTopics = dm4.getTopicsByType(typeUri);
             Iterator<Topic> topics = allTopics.iterator();
             while (topics.hasNext()) {
                 try {
                     JSONArray jsonTopics = json.getJSONArray("topics");
-                    JSONObject topic = createTopicJSON(topics.next());
+                    JSONObject topic = createTopicWithAssociationsJSON(topics.next(), assocTypes);
                     if (topic != null) jsonTopics.put(topic);
                 } catch (AccessControlException ex) {
                     log.warning("### Topic read permission denied => " + ex.getLocalizedMessage().toString());
@@ -145,20 +194,22 @@ public class ImportExportPlugin extends PluginActivator {
         }
     }
 
-    private JSONObject createTopicJSON(Topic topic) throws JSONException {
-        // 1) Get assigned workspace name
-        Topic ws = workspaces.getAssignedWorkspace(topic.getId());
-        String wsName = "";
-        if (ws != null) wsName = ws.getSimpleValue().toString();
-        // 2) Load all childs of the topic in memory
+    private JSONObject createTopicWithAssociationsJSON(Topic topic, List<RelatedTopic> assocTypes) throws JSONException {
+        // 1) Load all childs of the topic in memory
         topic.loadChildTopics();
+        // 2) Fetch all relating association of configured assocTypes
+        List<Association> assocs = new ArrayList<Association>();
+        for (RelatedTopic assocType : assocTypes) {
+            List<RelatedTopic> relatedTopics = topic.getRelatedTopics(assocType.getUri(), null, null, null);
+            for (RelatedTopic relatedTopic : relatedTopics) {
+                assocs.add(relatedTopic.getRelatingAssociation().loadChildTopics());
+            }
+        }
         // 3) Get all topicmaps the topic is "contained" in (#### Visibility)
         List<RelatedTopic> topicmaps = topic.getRelatedTopics("dm4.topicmaps.topicmap_context");
         return new JSONObject()
                 .put("topic", topic.toJSON())
-                .put("topicmaps", DeepaMehtaUtils.toJSONArray(topicmaps))
-                .put("associations", DeepaMehtaUtils.toJSONArray(topic.getAssociations()))
-                .put("workspace", wsName);
+                .put("associations", DeepaMehtaUtils.toJSONArray(assocs));
     }
 
     @POST
