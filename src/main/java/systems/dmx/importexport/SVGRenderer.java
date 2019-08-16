@@ -1,4 +1,4 @@
-package net.abriraqui.dm4.importexport;
+package systems.dmx.importexport;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
