@@ -41,6 +41,13 @@ Research
 Version History
 ---------------
 
+**0.8.0, Upcoming
+
+* Adapted to be compatible with DMX 5.0-beta-5
+* Changed package names
+
+**0.7**, Upcoming
+
 **0.6**, Apr 27, 2019
 
 - Improved support for importing Firefox (v53.x) Bookmarks (folders are imported as tags)
