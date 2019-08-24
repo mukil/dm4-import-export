@@ -43,7 +43,6 @@ import systems.dmx.core.service.Transactional;
 import systems.dmx.core.util.DMXUtils;
 import systems.dmx.files.FilesService;
 import systems.dmx.files.UploadedFile;
-import systems.dmx.tags2.TaggingService;
 import systems.dmx.topicmaps.Topicmap;
 import systems.dmx.topicmaps.TopicmapsService;
 import systems.dmx.workspaces.WorkspacesService;
@@ -56,8 +55,6 @@ public class ImportExportPlugin extends PluginActivator {
     private TopicmapsService topicmaps;
     @Inject
     private FilesService file;
-    @Inject
-    private TaggingService tagging;
     @Inject
     private WorkspacesService workspaces;
 
@@ -78,7 +75,7 @@ public class ImportExportPlugin extends PluginActivator {
     @Transactional
     @Path("/configured/content")
     public Topic exportConfiguredTopicTypes() {
-        String jsonFileName = "dm4-import-export-configured-"+new Date().toString()+".txt";
+        String jsonFileName = "dmx-import-export-configured-"+new Date().toString()+".txt";
         InputStream in = null;
         try {
             log.info("######## Start exporting topics of all configured topic and assoc types to JSON ######### ");
@@ -130,7 +127,7 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private List<RelatedTopic> getConfiguredTopicTypesForExport() {
-        Topic plugin = dmx.getTopicByUri("net.abriraqi.import-export");
+        Topic plugin = dmx.getTopicByUri("systems.dmx.import-export");
         log.info("Loaded " + plugin.getSimpleValue() + " plugin topic for inspecting export type configuration");
         List<RelatedTopic> configuredTypes = plugin.getRelatedTopics("dmx.core.association", "dmx.core.default",
                 "dmx.core.default", "dmx.core.topic_type");
@@ -138,7 +135,7 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private List<RelatedTopic> getConfiguredAssocTypesForExport() {
-        Topic plugin = dmx.getTopicByUri("net.abriraqi.import-export");
+        Topic plugin = dmx.getTopicByUri("systems.dmx.import-export");
         List<RelatedTopic> configuredAssocTypes = plugin.getRelatedTopics("dmx.core.association", "dmx.core.default",
                 "dmx.core.default", "dmx.core.assoc_type");
         return configuredAssocTypes;
@@ -184,7 +181,7 @@ public class ImportExportPlugin extends PluginActivator {
             }
             if (givenJson == null) {
                 InputStream in = new ByteArrayInputStream(json.toString().getBytes("UTF-8"));
-                String jsonFileName = "dm4-"+typeUri + "-topics-"+new Date().toString()+".txt";
+                String jsonFileName = "dmx-"+typeUri + "-topics-"+new Date().toString()+".txt";
                 return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
             } else {
                 return null;
@@ -459,16 +456,10 @@ public class ImportExportPlugin extends PluginActivator {
                 log.warning("Bookmarking Container Detected - Mapping Bookmarker Folders to Tags...");
                 // 1) Get or create folderName tag topic
                 String folderName = childEntry.getString("title");
-                // ### getOrCreate not needed anymore with dmx if identityAttr is really set
-                // except for caseInsensitive match
-                Topic folderTopic = tagging.getTagTopic(folderName, true);
-                if (folderTopic == null) {
-                    // 1.1) Create new Tag Item
-                    folderTopic = tagging.createTagTopic(folderName, "Imported Firefox Bookmarks Folder Name", true);
-                    if (folderNameTag != null) {
-                        // 1.2) Create association between current tag and parent tag (if given)
-                        getOrCreateSimpleAssoc(folderNameTag, folderTopic);
-                    }
+                // ### Fixme: Support for caseInsensitive tag matching
+                Topic folderTopic = createTagTopic(folderName);
+                if (folderNameTag != null) {
+                    getOrCreateSimpleAssoc(folderNameTag, folderTopic);
                 }
                 JSONArray entryChildsChilds = childEntry.getJSONArray("children");
                 log.info("  "+recursionCount+ "ndLevel Bookmark Folder " + folderName + " - TODO: Transform \""+folderName+"\" into TAG");
@@ -486,6 +477,11 @@ public class ImportExportPlugin extends PluginActivator {
         return webResource;
     }
 
+    private Topic createTagTopic(String tagName) {
+        return dmx.createTopic(mf.newTopicModel("dmx.tags.tag",
+                mf.newChildTopicsModel().put("dmx.tags.tag_name", tagName)));
+    }
+    
     private Topic transformFirefoxResourceEntry(JSONObject childEntry) {
         try {
             String bookmarkDescription = childEntry.getString("title");
@@ -513,6 +509,15 @@ public class ImportExportPlugin extends PluginActivator {
         }
     }
 
+    private Topic getTagTopic(String name) {
+        Topic tagName = dmx.getTopicByValue("dmx.tags.tag_name", new SimpleValue(name));
+        return getTagTopic(tagName);
+    }
+
+    private Topic getTagTopic(Topic name) {
+        return name.getRelatedTopic(null, "dmx.core.child", "dmx.core.parent", "dmx.tags.tag");
+    }
+    
     private void transformChromiumResourceEntry(Topic importedNote, Element element, Topic toBeRelated) {
         if (element.nodeName().equals("a")) {
             String linkHref = element.attr("href");
@@ -541,9 +546,9 @@ public class ImportExportPlugin extends PluginActivator {
                 folderModified = Long.parseLong(linkModifiedValue);
             }
             log.info("### Processing chromium bookmark folder element named \"" + text + "\"");
-            Topic tag = tagging.getTagTopic(text, true);
+            Topic tag = getTagTopic(text);
             if (tag == null) {
-                tag = tagging.createTagTopic(text, "Imported Chromium Bookmark Folder Name", false);
+                tag = createTagTopic(text);
                 tag.setProperty(DM4_TIME_CREATED, folderAdded, true);
                 if (folderModified != 0) {
                     tag.setProperty(DM4_TIME_MODIFIED, folderModified, true);
@@ -636,9 +641,9 @@ public class ImportExportPlugin extends PluginActivator {
                 log.fine("### Importing " + bookmarkTags + " as tags for this webpage from zotero report");
             }
             for (String tagValue : bookmarkTags) {
-                Topic tag = tagging.getTagTopic(tagValue, true);
+                Topic tag = getTagTopic(tagValue);
                 if (tag == null) {
-                    tag = tagging.createTagTopic(tagValue, "Imported Zotero Report Webpage Tag", false);
+                    tag = createTagTopic(tagValue);
                     log.info("NEW tag \""+tagValue+"\" created during import");
                 }
                 if (tag != null) {
