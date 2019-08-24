@@ -212,8 +212,8 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Transactional
-    @Path("/export/json")
-    public Topic exportTopicmapToJSON(@CookieParam("dm4_topicmap_id") long topicmapId) {
+    @Path("/topicmap/export/json")
+    public Topic exportTopicmapToJSON(@CookieParam("dmx_topicmap_id") long topicmapId) {
         try {
             log.info("Exporting Topicmap JSON ######### " + topicmapId);
             Topicmap topicmap = topicmaps.getTopicmap(topicmapId, true);
@@ -228,9 +228,9 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     @POST
-    @Path("/export/svg")
+    @Path("/topicmap/export/svg")
     @Transactional
-    public Topic exportTopicmapToSVG(@CookieParam("dm4_topicmap_id") long topicmapId) throws XMLStreamException {
+    public Topic exportTopicmapToSVG(@CookieParam("dmx_topicmap_id") long topicmapId) throws XMLStreamException {
         final int BOX_HEIGHT = 20;
         final int MARGIN_LEFT = 5;
         final int MARGIN_TOP = 14;
@@ -288,7 +288,7 @@ public class ImportExportPlugin extends PluginActivator {
                 svg.startGroupElement(topic.getId());
                 svg.rectangle(x - boxWidth / 2, y - BOX_HEIGHT / 2, boxWidth, BOX_HEIGHT, color(topic.getTypeUri()));
                 svg.text(x - boxWidth / 2 + MARGIN_LEFT, y - BOX_HEIGHT / 2 + MARGIN_TOP, value, "black");
-                svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
+                // ### Fixme: svg.image(x + boxWidth / 2, y, ICON_WIDTH, ICON_HEIGHT, typeIconDataUri(topic.getTypeUri()));
                 svg.endElement();
             }
             // 6) Close SVGWriter
@@ -780,7 +780,7 @@ public class ImportExportPlugin extends PluginActivator {
             // Icon resource not found in this plugin
             log.info("### FALLBACK to standard grey icon as typeIcon for \""
                     + typeUri + "\" icon could not be determined " + "during SVG Export");
-            iconIS = dmx.getPlugin("de.deepamehta.webclient").getStaticResource("web/images/ball-gray.png");
+            iconIS = dmx.getPlugin("systems.dmx.webclient").getStaticResource("web/images/ball-gray.png");
         }
         // create base64 representation of the current type icon
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
