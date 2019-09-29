@@ -273,10 +273,6 @@ public class ImportExportPlugin extends PluginActivator {
                     JSONArray topics = topicmap.getJSONArray("topics");
                     JSONObject workspace = topicmap.getJSONObject("workspace");
                     Topic ws = getOrCreateWorkspace(workspace);
-                    if (ws == null) {
-                        log.info("Could not fetch workspace by value " + workspace + " using \"DMX\" workspace to import Topicmap");
-                        ws = dmx.getTopic(dmx.getPrivilegedAccess().getDMXWorkspaceId());
-                    }
                     log.info("Topicmap is imported into workspace => " + ws.getSimpleValue());
                     workspaces.assignToWorkspace(map, ws.getId());
                     log.info("Topicmap contains " + topics.length() + " topics & " + assocs.length() + " associations");
@@ -295,15 +291,21 @@ public class ImportExportPlugin extends PluginActivator {
         return Response.ok(fileTopicId).build();
     }
 
-
     private Topic getOrCreateWorkspace(JSONObject workspace) {
         Topic ws = null;
         try {
             String wsName = workspace.getString("value");
-            log.info("GET OR CREATE WORKSPACE => " + wsName);
             // ### ACL Exception is thrown when "System" workspace arrives
-            ws = dmx.getTopicByValue("dmx.workspaces.name", new SimpleValue(wsName));
+            ws = dmx.getTopicByValue("dmx.workspaces.name", new SimpleValue(wsName)); // ### It worked once but does this still work?
             if (ws == null) {
+                // double check if it really does not exist yet
+                List<Topic> existingWs = dmx.getTopicsByType("dmx.workspaces.workspace");
+                for (Topic topic : existingWs) {
+                    if (topic.getSimpleValue().toString().equals(wsName)) {
+                        return topic;
+                    }
+                }
+                // create workspace
                 JSONObject childs = workspace.getJSONObject("childs");
                 JSONObject sharingMode = childs.getJSONObject("dm4.workspaces.sharing_mode");
                 String wsSharing = sharingMode.getString("value");
@@ -358,7 +360,7 @@ public class ImportExportPlugin extends PluginActivator {
                             + newTopic.getSimpleValue() +"\" (" + newTopic.getId()+")");
                     topicIds.put(formerId, newTopic.getId());
                 } catch (RuntimeException re) {
-                    Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic could not be created from DM4 JSON", re);
+                    Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic " + formerId + " (" + object.getJSONObject("topic") + ") could not be created from DM4 JSON", re);
                 }
             }
         } catch (JSONException ex) {
@@ -373,7 +375,7 @@ public class ImportExportPlugin extends PluginActivator {
                 JSONArray associations = topic.getJSONArray("associations");
                 for (int m = 0; m < associations.length(); m++) {
                     JSONObject assoc = associations.getJSONObject(m);
-                    String assocTypeUri = assoc.getString("type_uri").replace("dm4", "dmx");
+                    String assocTypeUri = buildDMXJSONAssocTypeUri(assoc.getString("type_uri"));
                     long formerId = assoc.getLong("id");
                     // String assocValue = assoc.getString("value");
                     JSONObject assocChilds = assoc.getJSONObject("childs");
@@ -404,11 +406,11 @@ public class ImportExportPlugin extends PluginActivator {
                                             + " Association with label " + newAssoc.getSimpleValue());
                                 // As associations are contained twice in the dump we need to catch this
                                 } catch (RuntimeException re) {
-                                    log.warning("> Association " + newAssoc.toString() + " could not be imported caused by \""
+                                    log.warning("> Association " + newAssoc + " could not be imported caused by \""
                                             + re.getCause().getMessage() + "\"");
                                 }
                             } else {
-                                log.info("> Association of type " + assocTypeUri + " was not created since it already exists");
+                                log.info("> Association of type \"" + assocTypeUri + "\" was not created since it already exists");
                             }
                         } catch (RuntimeException rea) {
                             Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Assoc existence check could not fetch assoc", rea);
@@ -462,8 +464,8 @@ public class ImportExportPlugin extends PluginActivator {
                     long newTopicId = topicIds.get(formerTopicId); // all topics are imported as not pinned
                     topicmaps.addTopicToTopicmap(map.getId(), newTopicId, mf.newViewProps(posX, posY, visibility, false));
                     log.fine("Added topic " + topic.getString("value") + " to topicmap " + map.getSimpleValue());
-                } catch (NullPointerException npe) {
-                    log.warning("> Topic of type \""+ typeUri+ "\" was not contained in export file " + npe + " - Skipped adding to Topicmap");
+                } catch (Exception e) {
+                    log.warning("> Error adding " + formerTopicId + " (\""+ typeUri+ "\") was not contained in export file " + e + " - Skipping...");
                 }
             } catch (JSONException ex) {
                 log.severe("> Problem inspecting topic " + topic + " to add to topicmap " + map + " caused by " + ex.getCause().getMessage());
@@ -504,6 +506,14 @@ public class ImportExportPlugin extends PluginActivator {
         topicJSON = topicJSON.replaceAll("dmx.events.title", "dmx.events.event_name");
         topicJSON = topicJSON.replaceAll("dmx.events.notes", "dmx.events.event_description");
         return topicJSON;
+    }
+    
+    private String buildDMXJSONAssocTypeUri(String assoc) {
+        String assocJSON = assoc.toString();
+        assocJSON = assocJSON.replaceAll("dm4", "dmx");
+        assocJSON = assocJSON.replaceAll("dmx.events.participant", "dmx.events.event_involvement");
+        assocJSON = assocJSON.replaceAll("dmx.contacts.organization_association", "dmx.contacts.organization_involvement");
+        return assocJSON;
     }
 
 
