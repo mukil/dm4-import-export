@@ -10,7 +10,6 @@ import javax.ws.rs.core.Response;
 import javax.xml.stream.XMLStreamException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.File;
 import java.io.BufferedReader;

@@ -12,28 +12,28 @@
     <parent>
         <groupId>systems.dmx</groupId>
         <artifactId>dmx-plugin</artifactId>
-        <version>5.0-beta-5</version>
+        <version>5.0-beta-6</version>
     </parent>
 
-    <!--properties>
-        <dmx.deploy.dir>/Users/malt/source/dmx/dmx-platform/bundle-deploy</dmx.deploy.dir>
-    </properties-->
+    <properties>
+        <!--dmx.deploy.dir>/home/malt/source/dmx/dmx-platform/bundle-deploy</dmx.deploy.dir-->
+    </properties>
 
     <dependencies>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-topicmaps</artifactId>
-            <version>5.0-beta-5</version>
+            <version>5.0-beta-6</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-files</artifactId>
-            <version>5.0-beta-5</version>
+            <version>5.0-beta-6</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-workspaces</artifactId>
-            <version>5.0-beta-5</version>
+            <version>5.0-beta-6</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>
@@ -48,7 +48,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>1.2</version>
+                <version>1.6.0</version>
                 <executions>
                     <execution>
                         <!-- Needed for Local Webpack & CI/CD -->
