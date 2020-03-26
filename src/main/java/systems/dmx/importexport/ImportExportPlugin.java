@@ -32,6 +32,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import systems.dmx.core.Assoc;
+import static systems.dmx.core.Constants.ASSOCIATION;
+import static systems.dmx.core.Constants.CHILD;
+import static systems.dmx.core.Constants.COMPOSITION;
+import static systems.dmx.core.Constants.DEFAULT;
+import static systems.dmx.core.Constants.PARENT;
 import systems.dmx.core.RelatedTopic;
 import systems.dmx.core.Topic;
 import systems.dmx.core.TopicType;
@@ -49,6 +54,7 @@ import systems.dmx.core.service.Transactional;
 import systems.dmx.core.service.accesscontrol.SharingMode;
 import systems.dmx.core.util.DMXUtils;
 import systems.dmx.files.FilesService;
+import systems.dmx.files.StoredFile;
 import systems.dmx.files.UploadedFile;
 import systems.dmx.topicmaps.Topicmap;
 import systems.dmx.topicmaps.TopicmapsService;
@@ -61,7 +67,7 @@ public class ImportExportPlugin extends PluginActivator {
     @Inject
     private TopicmapsService topicmaps;
     @Inject
-    private FilesService file;
+    private FilesService files;
     @Inject
     private WorkspacesService workspaces;
 
@@ -70,8 +76,8 @@ public class ImportExportPlugin extends PluginActivator {
     private Hashtable<Long, Long> topicIds = new Hashtable();
     private Hashtable<Long, Long> assocIds = new Hashtable();
 
-    private static final String DM4_TIME_CREATED = "dmx.time.created";
-    private static final String DM4_TIME_MODIFIED = "dmx.time.modified";
+    private static final String DMX_TIME_CREATED = "dmx.time.created";
+    private static final String DMX_TIME_MODIFIED = "dmx.time.modified";
 
     // Zotero Report Column Header Names seem to be internationalized...
     private static final String ZOTERO_ENTRY_TYPE_COLUMN_KEY = "Typ";
@@ -114,7 +120,7 @@ public class ImportExportPlugin extends PluginActivator {
             Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
         }
         // 5) Write export file
-        return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
+        return files.createFile(in, files.pathPrefix() + "/" + jsonFileName);
     }
 
     private void addWorkspaceTopicsToExport(JSONObject json) {
@@ -139,15 +145,15 @@ public class ImportExportPlugin extends PluginActivator {
     private List<RelatedTopic> getConfiguredTopicTypesForExport() {
         Topic plugin = dmx.getTopicByUri("systems.dmx.import-export");
         log.info("Loaded " + plugin.getSimpleValue() + " plugin topic for inspecting export type configuration");
-        List<RelatedTopic> configuredTypes = plugin.getRelatedTopics("dmx.core.association", "dmx.core.default",
-                "dmx.core.default", "dmx.core.topic_type");
+        List<RelatedTopic> configuredTypes = plugin.getRelatedTopics(ASSOCIATION, DEFAULT,
+                DEFAULT, "dmx.core.topic_type");
         return configuredTypes;
     }
 
     private List<RelatedTopic> getConfiguredAssocTypesForExport() {
         Topic plugin = dmx.getTopicByUri("systems.dmx.import-export");
-        List<RelatedTopic> configuredAssocTypes = plugin.getRelatedTopics("dmx.core.association", "dmx.core.default",
-                "dmx.core.default", "dmx.core.assoc_type");
+        List<RelatedTopic> configuredAssocTypes = plugin.getRelatedTopics(ASSOCIATION, DEFAULT,
+                DEFAULT, "dmx.core.assoc_type");
         return configuredAssocTypes;
     }
 
@@ -192,7 +198,7 @@ public class ImportExportPlugin extends PluginActivator {
             if (givenJson == null) {
                 InputStream in = new ByteArrayInputStream(json.toString().getBytes("UTF-8"));
                 String jsonFileName = "dmx-"+typeUri + "-topics-"+new Date().toString()+".txt";
-                return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
+                return files.createFile(in, files.pathPrefix() + "/" + jsonFileName);
             } else {
                 return null;
             }
@@ -215,6 +221,21 @@ public class ImportExportPlugin extends PluginActivator {
         return new JSONObject()
                 .put("topic", topic.toJSON())
                 .put("associations", DMXUtils.toJSONArray(assocs));
+    }
+
+    @POST
+    @Path("/import/{htmlOrJson}")
+    @Consumes("multipart/form-data")
+    @Transactional
+    public Topic uploadFile(UploadedFile file, @PathParam("htmlOrJson") String htmlOrJson) {
+        String operation = "Uploaded File " + file + " for importing " + htmlOrJson.toUpperCase();
+        try {
+            log.info(operation);
+            StoredFile storedFile = files.storeFile(file, "/");
+            return dmx.getTopic(storedFile.getFileTopicId());
+        } catch (Exception e) {
+            throw new RuntimeException(operation + " failed", e);
+        }
     }
 
 
@@ -318,7 +339,7 @@ public class ImportExportPlugin extends PluginActivator {
                     ws = workspaces.createWorkspace(wsName, null, SharingMode.COMMON);
                 }
             } else {
-                Topic realWs = ws.getRelatedTopic(null, "dmx.core.child", "dmx.core.parent", "dmx.workspaces.workspace");
+                Topic realWs = ws.getRelatedTopic(null, CHILD, PARENT, "dmx.workspaces.workspace");
                 log.info("Workspace exists already - " + realWs.toJSON());
                 return realWs;
             }
@@ -329,7 +350,7 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private String getFileContentsAsString(long fileTopicId) {
-        File export = file.getFile(fileTopicId);
+        File export = files.getFile(fileTopicId);
         StringBuilder content = new StringBuilder();
         try {
             FileReader fileReader = new FileReader(export.getAbsolutePath());
@@ -528,7 +549,7 @@ public class ImportExportPlugin extends PluginActivator {
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
             String jsonFileName = "topicmap-" + topicmapId + ".txt";
-            return file.createFile(in, file.pathPrefix() + "/" + jsonFileName);
+            return files.createFile(in, files.pathPrefix() + "/" + jsonFileName);
             // return filesService.createFile(in, jsonFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export failed", e);
@@ -553,7 +574,7 @@ public class ImportExportPlugin extends PluginActivator {
             // 1) Setup default file name of SVG to write to
             String svgFileName = "Exported_Topicmap_" + topicmapId + ".svg";
             // 2) Get DM4 filerepo configuration setting and write to document to root folder
-            String documentPath = file.getFile("/") + "/" + svgFileName;
+            String documentPath = files.getFile("/") + "/" + svgFileName;
             // 3) Create SVGWriter
             SVGRenderer svg = new SVGRenderer(documentPath);
             svg.startGroupElement(topicmapId);
@@ -603,7 +624,7 @@ public class ImportExportPlugin extends PluginActivator {
             svg.endElement();
             svg.closeDocument();
             // 7) Create and return new file topic for the exported document
-            return file.getFileTopic(file.pathPrefix() + "/" + svgFileName);
+            return files.getFileTopic(files.pathPrefix() + "/" + svgFileName);
         } catch (Exception e) {
             throw new RuntimeException("Export Topicmap to SVG failed", e);
         }
@@ -615,7 +636,7 @@ public class ImportExportPlugin extends PluginActivator {
      * @return A JSON Object encoded as a plain text String containing two properties used by the dm4-webclient: "message" and "topic_id".
      */
     @POST
-    @Path("/import")
+    @Path("/import/topicmap")
     @Transactional
     @Consumes("multipart/form-data")
     public Topic importTopicmap(UploadedFile file) {
@@ -692,7 +713,7 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/import/bookmarks/chromium")
     @Transactional
     @Consumes("multipart/form-data")
-    public String importChromiumBookmarks(UploadedFile file) {
+    public Topic importChromiumBookmarks(UploadedFile file) {
         try {
             String htmlString = file.getString("UTF-8");
             Document doc = Jsoup.parse(htmlString);
@@ -708,8 +729,7 @@ public class ImportExportPlugin extends PluginActivator {
                 }
             }
             log.info("#### Mapping Chromium Bookmarks Backup to Web Resources COMPLETED ####");
-            return "{\"message\": \"All valid chromium bookmark entries contained in the backup file were successfully mapped to "
-                + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
+            return importedNote;
         } catch (Exception e) {
             throw new RuntimeException("Importing Web Resources from Chromium Bookmarks file FAILED", e);
         }
@@ -826,7 +846,7 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private Topic getTagTopic(Topic name) {
-        return name.getRelatedTopic(null, "dmx.core.child", "dmx.core.parent", "dmx.tags.tag");
+        return (name != null) ? name.getRelatedTopic(null, CHILD, PARENT, "dmx.tags.tag") : null;
     }
     
     private void transformChromiumResourceEntry(Topic importedNote, Element element, Topic toBeRelated) {
@@ -860,9 +880,9 @@ public class ImportExportPlugin extends PluginActivator {
             Topic tag = getTagTopic(text);
             if (tag == null) {
                 tag = createTagTopic(text);
-                tag.setProperty(DM4_TIME_CREATED, folderAdded, true);
+                tag.setProperty(DMX_TIME_CREATED, folderAdded, true);
                 if (folderModified != 0) {
-                    tag.setProperty(DM4_TIME_MODIFIED, folderModified, true);
+                    tag.setProperty(DMX_TIME_MODIFIED, folderModified, true);
                 }
                 log.info("NEW tag \""+text+"\" created during import");
             }
@@ -982,13 +1002,12 @@ public class ImportExportPlugin extends PluginActivator {
         Assoc importedAssoc = null;
         if (importerNote != null) {
             // 1) Check if association to "importerNote" exists
-            importedAssoc = dmx.getAssoc("dmx.core.association", importerNote.getId(), webResource.getId(),
-                "dmx.core.default", "dmx.core.default");
+            importedAssoc = dmx.getAssoc(ASSOCIATION, importerNote.getId(), webResource.getId(), DEFAULT, DEFAULT);
             if (importedAssoc == null) {
                 // 2) Create association to "importerNote" exists
-                importedAssoc = dmx.createAssoc(mf.newAssocModel("dmx.core.association",
-                    mf.newTopicPlayerModel(importerNote.getId(), "dmx.core.default"),
-                    mf.newTopicPlayerModel(webResource.getId(), "dmx.core.default")));
+                importedAssoc = dmx.createAssoc(mf.newAssocModel(ASSOCIATION,
+                    mf.newTopicPlayerModel(importerNote.getId(), DEFAULT),
+                    mf.newTopicPlayerModel(webResource.getId(), DEFAULT)));
             }
         }
         if (folderNameTag != null) {
@@ -999,13 +1018,13 @@ public class ImportExportPlugin extends PluginActivator {
 
     private Assoc getOrCreateSimpleAssoc(Topic defaultPlayer1, Topic defaultPlayer2) {
         // 3) Check and create assoc to folderNameTag
-        Assoc folderTagAssoc = dmx.getAssoc("dmx.core.association", defaultPlayer1.getId(), defaultPlayer2.getId(),
-            "dmx.core.parent", "dmx.core.child");
+        Assoc folderTagAssoc = dmx.getAssoc(ASSOCIATION, defaultPlayer1.getId(), defaultPlayer2.getId(),
+            PARENT, CHILD);
         if (folderTagAssoc == null) {
             // 4) Create assoc from webResource to folderNameTag
-            folderTagAssoc = dmx.createAssoc(mf.newAssocModel("dmx.core.association",
-                mf.newTopicPlayerModel(defaultPlayer1.getId(), "dmx.core.parent"),
-                mf.newTopicPlayerModel(defaultPlayer2.getId(), "dmx.core.child")));
+            folderTagAssoc = dmx.createAssoc(mf.newAssocModel(ASSOCIATION,
+                mf.newTopicPlayerModel(defaultPlayer1.getId(), PARENT),
+                mf.newTopicPlayerModel(defaultPlayer2.getId(), CHILD)));
             log.info("NEW relation from \"" + defaultPlayer1.getTypeUri() + "\" created to \"" + defaultPlayer2.getTypeUri()+ "\"");
         }
         return folderTagAssoc;
@@ -1015,11 +1034,10 @@ public class ImportExportPlugin extends PluginActivator {
         // 1) Check if a Web Resource Topic with that URL already exists
         Topic webResource;
         try {
-            webResource = dmx.getTopicByValue("dmx.webbrowser.url", new SimpleValue(url.trim()));
+            webResource = dmx.getTopicByValue("dmx.base.url", new SimpleValue(url.trim()));
             if (webResource != null) {
                 log.info("### Web Resource \""+url+"\" EXISTS - NOT UPDATED");
-                Topic webRsrcParent = webResource.getRelatedTopic("dmx.core.composition", "dmx.core.child", "dmx.core.parent",
-                    "dmx.webbrowser.web_resource");
+                Topic webRsrcParent = webResource.getRelatedTopic(COMPOSITION, CHILD, PARENT, "dmx.bookmarks.bookmark");
                 return (webRsrcParent != null) ? webRsrcParent : webResource;
             }
         } catch (RuntimeException re) {
@@ -1032,10 +1050,10 @@ public class ImportExportPlugin extends PluginActivator {
         }
         // 2) Create new Web Resource Topic
         ChildTopicsModel childValues = mf.newChildTopicsModel();
-        childValues.put("dmx.webbrowser.url", url.trim());
-        childValues.put("dmx.webbrowser.web_resource_description", description);
-        webResource = dmx.createTopic(mf.newTopicModel("dmx.webbrowser.web_resource", childValues));
-        if (created != 0) webResource.setProperty(DM4_TIME_CREATED, created, true);
+        childValues.put("dmx.base.url", url.trim());
+        childValues.put("dmx.bookmarks.description", description);
+        webResource = dmx.createTopic(mf.newTopicModel("dmx.bookmarks.bookmark", childValues));
+        if (created != 0) webResource.setProperty(DMX_TIME_CREATED, created, true);
         // lastModified is anyway overwritten by dm4-times plugin as (i guess) setting the timepropery is an udpate
         if (modified != 0) webResource.setProperty("dmx.time.modified", modified, true);
         log.info("### Web Resource \""+url+"\" CREATED");

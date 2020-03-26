@@ -3,6 +3,7 @@
 // Artifact ID (see this plugin's pom.xml), and has basically the form "<groupId>.<artifactId>".
 const pluginUri = 'systems.dmx.import-export'
 
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const { VueLoaderPlugin }  = require('vue-loader')
 
@@ -11,6 +12,7 @@ module.exports = {
   output: {
     path: __dirname + '/src/main/resources/web',
     filename: '[chunkhash].plugin.js',
+    chunkFilename: '[chunkhash].[name].js',
     publicPath: '/' + pluginUri + '/',
     library: '_' + pluginUri.replace(/[.-]/g, '_'),
     libraryTarget: 'jsonp'
@@ -36,6 +38,7 @@ module.exports = {
     ]
   },
   plugins: [
+    new CleanWebpackPlugin(),
     new MiniCssExtractPlugin({
       filename: '[contenthash].style.css'
     }),

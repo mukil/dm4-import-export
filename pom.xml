@@ -12,28 +12,28 @@
     <parent>
         <groupId>systems.dmx</groupId>
         <artifactId>dmx-plugin</artifactId>
-        <version>5.0-beta-6</version>
+        <version>5.0-beta-7-SNAPSHOT</version>
     </parent>
 
-    <properties>
-        <!--dmx.deploy.dir>/home/malt/source/dmx/dmx-platform/bundle-deploy</dmx.deploy.dir-->
-    </properties>
+    <!--properties>
+        <dmx.deploy.dir>C:\cygwin64\home\MRG\source\dmx-platform\bundle-deploy</dmx.deploy.dir>
+    </properties-->
 
     <dependencies>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-topicmaps</artifactId>
-            <version>5.0-beta-6</version>
+            <version>5.0-beta-7-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-files</artifactId>
-            <version>5.0-beta-6</version>
+            <version>5.0-beta-7-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-workspaces</artifactId>
-            <version>5.0-beta-6</version>
+            <version>5.0-beta-7-SNAPSHOT</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>
