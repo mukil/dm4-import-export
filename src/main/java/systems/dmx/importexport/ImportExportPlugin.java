@@ -56,6 +56,7 @@ import systems.dmx.core.util.DMXUtils;
 import systems.dmx.files.FilesService;
 import systems.dmx.files.StoredFile;
 import systems.dmx.files.UploadedFile;
+import systems.dmx.accesscontrol.AccessControlService;
 import systems.dmx.topicmaps.Topicmap;
 import systems.dmx.topicmaps.TopicmapsService;
 import systems.dmx.workspaces.WorkspacesService;
@@ -67,6 +68,8 @@ public class ImportExportPlugin extends PluginActivator {
     @Inject
     private TopicmapsService topicmaps;
     @Inject
+    private AccessControlService acl;
+    @Inject
     private FilesService files;
     @Inject
     private WorkspacesService workspaces;
@@ -76,8 +79,8 @@ public class ImportExportPlugin extends PluginActivator {
     private Hashtable<Long, Long> topicIds = new Hashtable();
     private Hashtable<Long, Long> assocIds = new Hashtable();
 
-    private static final String DMX_TIME_CREATED = "dmx.time.created";
-    private static final String DMX_TIME_MODIFIED = "dmx.time.modified";
+    private static final String DMX_TIME_CREATED = "dmx.timestamps.created";
+    private static final String DMX_TIME_MODIFIED = "dmx.timestamps.modified";
 
     // Zotero Report Column Header Names seem to be internationalized...
     private static final String ZOTERO_ENTRY_TYPE_COLUMN_KEY = "Typ";
@@ -244,7 +247,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     /**
      * Should be run as logged in user `admin` with a workspace cookie set.
-     * Handles **DeepaMehta 4** Exported JSON Content Files!
+     * Handles **DMX** Exported JSON Content Files!
      * @param fileTopicId
      * @return fileTopicId
      */
@@ -271,7 +274,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     /**
      * Fixme: Has to be run as logged in user `admin` as it queries for the `System` workspace.
-     * Handles **DeepaMehta 4** Exported JSON Content Files!
+     * Handles **DMX** Exported JSON Content Files!
      * @param fileTopicId
      * @return fileTopicId
      */
@@ -448,10 +451,10 @@ public class ImportExportPlugin extends PluginActivator {
 
     private Topic createTopicmapFromJSON(JSONObject topicmap) {
         try {
-            JSONObject state = topicmap.getJSONObject("info");
+            JSONObject state = topicmap.getJSONObject("topic");
             // get map translation
-            JSONObject stateChilds = state.getJSONObject("childs");
-            JSONObject translation = stateChilds.getJSONObject("dm4.topicmaps.state");
+            JSONObject stateChilds = state.getJSONObject("children");
+            JSONObject translation = stateChilds.getJSONObject("dmx.topicmaps.state");
             String translationValuePair = translation.getString("value");
             String[] pos = translationValuePair.split(" ");
             // creating topicmap
@@ -548,7 +551,7 @@ public class ImportExportPlugin extends PluginActivator {
             Topicmap topicmap = topicmaps.getTopicmap(topicmapId, true);
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            String jsonFileName = "topicmap-" + topicmapId + ".txt";
+            String jsonFileName = "topicmap-" + topicmapId + ".json";
             return files.createFile(in, files.pathPrefix() + "/" + jsonFileName);
             // return filesService.createFile(in, jsonFileName);
         } catch (Exception e) {
@@ -631,7 +634,7 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     /**
-     * Understands and imports a Topicmap JSON export document created with DeepaMehta 4.x.
+     * Understands and imports a Topicmap JSON export document created with DMX.x.
      * @param file A de.deepamehta.files.UploadedFile object
      * @return A JSON Object encoded as a plain text String containing two properties used by the dm4-webclient: "message" and "topic_id".
      */
@@ -639,12 +642,12 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/import/topicmap")
     @Transactional
     @Consumes("multipart/form-data")
-    public Topic importTopicmap(UploadedFile file) {
+    public String importTopicmap(UploadedFile file) {
         try {
             String json = file.getString();
 
             JSONObject topicmap = new JSONObject(json);
-            JSONObject info = topicmap.getJSONObject("info");
+            JSONObject info = topicmap.getJSONObject("topic");
 
             JSONArray assocsArray = topicmap.getJSONArray("assocs");
             JSONArray topicsArray = topicmap.getJSONArray("topics");
@@ -652,15 +655,15 @@ public class ImportExportPlugin extends PluginActivator {
             String origTopicmapName = info.getString("value");
             // ### Todo: Currently we import topicmaps withut their viewprops (translation)
             Topic importedTopicmap =
-                    topicmaps.createTopicmap("Imported Topicmap: " + origTopicmapName
-                            , "dmx.webclient.default_topicmap_renderer", null);
+                    topicmaps.createTopicmap("Imported: " + origTopicmapName, "dmx.topicmaps.topicmap", null);
             long topicmapId = importedTopicmap.getId();
             log.info("###### importedTopicmapId " + topicmapId);
             // 
             Map<Long, Long> mapTopicIds = new HashMap();
             importTopics(topicsArray, mapTopicIds, topicmapId);
             importAssociations(assocsArray, mapTopicIds, topicmapId);
-            return importedTopicmap;
+            // Todo: Add error reporting
+            return "{\"message\": \"Topicmap successfully restored. \", \"topic_id\": "+importedTopicmap.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Topicmap FAILED", e);
         }
@@ -681,7 +684,7 @@ public class ImportExportPlugin extends PluginActivator {
             String json = file.getString("UTF-8");
             JSONObject fileContent = new JSONObject(json);
             JSONArray firstChildren = fileContent.getJSONArray("children");
-            log.info("###### Starting to map Firefox Bookmark Backup Entries to DeepaMehta 4 Web Resources ######");
+            log.info("###### Starting to map Firefox Bookmark Backup Entries to DMX Bookmarks ######");
             Topic importedNote = createNoteImportTopic(file.getName());
             int webResourcesCreatedCount = 0;
             for (int i = 0; i < firstChildren.length(); i++) {
@@ -697,9 +700,9 @@ public class ImportExportPlugin extends PluginActivator {
             }
             log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreatedCount + " new web resources ####");
             return "{\"message\": \"All valid bookmarks contained in the Firefox backup file were successfully mapped to "
-                + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
+                + "<em>Bookmarks</em>.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
-            throw new RuntimeException("Importing Web Resources from Firefox Bookmarks Backup FAILED", e);
+            throw new RuntimeException("Importing Bookmarks from Firefox Bookmarks Backup FAILED", e);
         }
     }
 
@@ -713,12 +716,12 @@ public class ImportExportPlugin extends PluginActivator {
     @Path("/import/bookmarks/chromium")
     @Transactional
     @Consumes("multipart/form-data")
-    public Topic importChromiumBookmarks(UploadedFile file) {
+    public String importChromiumBookmarks(UploadedFile file) {
         try {
             String htmlString = file.getString("UTF-8");
             Document doc = Jsoup.parse(htmlString);
             Elements folderNames = doc.getElementsByTag("dt");
-            log.info("###### Starting to map Chromium Bookmark HTML Export to DeepaMehta 4 Web Resources ######");
+            log.info("###### Starting to map Chromium Bookmark HTML Export to DMX Bookmarks ######");
             Topic importedNote = createNoteImportTopic(file.getName());
             log.info("### Iterating " + folderNames.size() + " chromium bookmark entries (flattened).");
             if (folderNames.size() > 0) {
@@ -728,10 +731,11 @@ public class ImportExportPlugin extends PluginActivator {
                     transformChromiumResourceEntry(importedNote, element, null);
                 }
             }
-            log.info("#### Mapping Chromium Bookmarks Backup to Web Resources COMPLETED ####");
-            return importedNote;
+            log.info("#### Mapping Chromium Bookmarks Backup to Bookmarks COMPLETED ####");
+            return "{\"message\": \"All valid bookmarks contained in the Chrome backup file were successfully mapped to "
+                + "<em>Bookmarks</em>.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
-            throw new RuntimeException("Importing Web Resources from Chromium Bookmarks file FAILED", e);
+            throw new RuntimeException("Importing Bookmarks from Chromium Bookmarks file FAILED", e);
         }
     }
 
@@ -749,17 +753,17 @@ public class ImportExportPlugin extends PluginActivator {
             String htmlString = file.getString("UTF-8");
             Document doc = Jsoup.parse(htmlString);
             Elements webpages = doc.getElementsByClass("webpage");
-            log.info("###### Starting to map Zotero Report Bookmarks to DeepaMehta 4 Web Resources ######");
+            log.info("###### Starting to map Zotero Report Bookmarks to DMX Bookmarks ######");
             Topic importedNote = createNoteImportTopic(file.getName());
             log.info("### Iterating " + webpages.size() + " webpages in zotero report.");
             for (Element webpage : webpages) {
                 transformZoteroWebpageEntry(importedNote, webpage);
             }
-            log.info("#### Mapping Zotero Report Bookmarks to Web Resources COMPLETED ####");
+            log.info("#### Mapping Zotero Report Bookmarks to Bookmarks COMPLETED ####");
             return "{\"message\": \"All valid webpages in the zotero report file were successfully mapped to "
-                + "<em>Web Resources</em>.\", \"topic_id\": "+importedNote.getId()+"}";
+                + "<em>Bookmarks</em>.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
-            throw new RuntimeException("Importing Web Resources from Zotero Report Bookmarks file FAILED", e);
+            throw new RuntimeException("Importing Bookmarks from Zotero Report Bookmarks file FAILED", e);
         }
     }
 
@@ -778,7 +782,7 @@ public class ImportExportPlugin extends PluginActivator {
                         createBookmarkRelations(importedNote, webResource, folderNameTag);
                     } else {
                         // An exception has occured.
-                        log.warning("Web Resource Entry could not be created with JSONObject: " + childEntry.toString());
+                        log.warning("Bookmark Entry could not be created with JSONObject: " + childEntry.toString());
                     }
                 } else {
                     log.warning("Skipping Bookmark entry due to missing Title or URL, " + childEntry.toString());
@@ -792,14 +796,16 @@ public class ImportExportPlugin extends PluginActivator {
                 if (folderNameTag != null) {
                     getOrCreateSimpleAssoc(folderNameTag, folderTopic);
                 }
-                JSONArray entryChildsChilds = childEntry.getJSONArray("children");
-                log.info("  "+recursionCount+ "ndLevel Bookmark Folder " + folderName + " - TODO: Transform \""+folderName+"\" into TAG");
-                // 2.0) If entry is of type bookmark, create a tag for it, associate it with the parent tag and then
-                    // go over all its children and (recursively) call transformMozillaBookmarkEntry on them
-                for (int m = 0; m < entryChildsChilds.length(); m++) {
-                    recursionCount++;
-                    JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
-                    transformMozillaBookmarkEntry(childChildEntry, importedNote, folderTopic, recursionCount);
+                if (childEntry.has("children")){
+                    JSONArray entryChildsChilds = childEntry.getJSONArray("children");
+                    log.info("  "+recursionCount+ "ndLevel Bookmark Folder " + folderName + " - TODO: Transform \""+folderName+"\" into TAG");
+                    // 2.0) If entry is of type bookmark, create a tag for it, associate it with the parent tag and then
+                        // go over all its children and (recursively) call transformMozillaBookmarkEntry on them
+                    for (int m = 0; m < entryChildsChilds.length(); m++) {
+                        recursionCount++;
+                        JSONObject childChildEntry = entryChildsChilds.getJSONObject(m);
+                        transformMozillaBookmarkEntry(childChildEntry, importedNote, folderTopic, recursionCount);
+                    }
                 }
             }
         } catch (JSONException ex) {
@@ -858,15 +864,15 @@ public class ImportExportPlugin extends PluginActivator {
             long linkAdded = new Date().getTime();
             long linkModified = new Date().getTime();
             if (!linkAddedValue.isEmpty()) {
-                linkAdded = Long.parseLong(linkAddedValue)*1000;
+                linkAdded = Long.parseLong(linkAddedValue);
             }
             if (!linkModifiedValue.isEmpty()) {
-                linkModified = Long.parseLong(linkModifiedValue)*1000;
+                linkModified = Long.parseLong(linkModifiedValue);
             }
             /* String associatedWithMessage = (toBeRelated != null) ? ", Associate with : " + toBeRelated.getSimpleValue() + "" : "";
             log.info("### Processing chromium link entry  \"" + linkName + "\" (" + linkHref + "), Added: "
                 + new Date(linkAdded*1000).toLocaleString() + associatedWithMessage); **/
-            Topic webResource = getOrCreateWebResource(linkHref, linkName, (linkAdded*1000), linkModified);
+            Topic webResource = getOrCreateWebResource(linkHref, linkName, linkAdded, linkModified);
             createBookmarkRelations(importedNote, webResource, toBeRelated);
         } else if (element.nodeName().equals("h3")) {
             String text = element.ownText().trim();
@@ -989,10 +995,10 @@ public class ImportExportPlugin extends PluginActivator {
 
     private Topic createNoteImportTopic(String fileName) {
         ChildTopicsModel childValues = mf.newChildTopicsModel();
-        childValues.put("dmx.notes.title", "Browser Bookmarks Import, " + fileName);
-        childValues.put("dmx.notes.text", "This note relates web resources created through an import process, namely the Firefox Bookmark Backup File "
-            + "(" + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
-            + "web resources you imported when and from which backup file they originated from.");
+        childValues.put("dmx.notes.title", "Bookmarks Import, " + fileName + " by " + acl.getUsername());
+        childValues.put("dmx.notes.text", "This note relates all bookmarks created through an import process done by " + acl.getUsername() + " "
+            + "(Filename: " + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
+            + "bookmarks where imported when, by whom using which backup file.");
         Topic importerNote = dmx.createTopic(mf.newTopicModel("dmx.notes.note", childValues));
         log.info("### Importer Note Topic for \""+fileName+"\" CREATED");
         return importerNote;
@@ -1031,12 +1037,12 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private Topic getOrCreateWebResource(String url, String description, long created, long modified) {
-        // 1) Check if a Web Resource Topic with that URL already exists
+        // 1) Check if a Bookmark Topic with that URL already exists
         Topic webResource;
         try {
             webResource = dmx.getTopicByValue("dmx.base.url", new SimpleValue(url.trim()));
             if (webResource != null) {
-                log.info("### Web Resource \""+url+"\" EXISTS - NOT UPDATED");
+                log.info("### Bookmark \""+url+"\" EXISTS - NOT UPDATED");
                 Topic webRsrcParent = webResource.getRelatedTopic(COMPOSITION, CHILD, PARENT, "dmx.bookmarks.bookmark");
                 return (webRsrcParent != null) ? webRsrcParent : webResource;
             }
@@ -1044,19 +1050,19 @@ public class ImportExportPlugin extends PluginActivator {
             // This could be an AccessControlExcception or a runtime exception pointing at ambiguity of a
             // java.util.NoSuchElementException: More than one element in org.neo4j.index.impl.lucene.LuceneIndex
             // In any way, we cannot do any thing more about the circumstances which lead us here but noting them.
-            log.warning("Web Resource could not be created, either due to an access control issue or a "
+            log.warning("Bookmark could not be created, either due to an access control issue or a "
                 + "messed up lucene KEY index (allowing web resources to exists just once in a DB), caused by: "
                 + re.getLocalizedMessage());
         }
-        // 2) Create new Web Resource Topic
+        // 2) Create new Bookmark Topic
         ChildTopicsModel childValues = mf.newChildTopicsModel();
         childValues.put("dmx.base.url", url.trim());
         childValues.put("dmx.bookmarks.description", description);
         webResource = dmx.createTopic(mf.newTopicModel("dmx.bookmarks.bookmark", childValues));
         if (created != 0) webResource.setProperty(DMX_TIME_CREATED, created, true);
-        // lastModified is anyway overwritten by dm4-times plugin as (i guess) setting the timepropery is an udpate
-        if (modified != 0) webResource.setProperty("dmx.time.modified", modified, true);
-        log.info("### Web Resource \""+url+"\" CREATED");
+        // lastModified is anyway overwritten by dm4-times plugin as (i guess) setting the timepropery is an udpate in itself
+        if (modified != 0) webResource.setProperty(DMX_TIME_MODIFIED, modified, true);
+        log.info("### Bookmark \""+url+"\" CREATED");
         return webResource;
     }
 
@@ -1134,7 +1140,8 @@ public class ImportExportPlugin extends PluginActivator {
 
     private void createTopic(JSONObject topic, Map<Long, Long> mapTopicIds, long topicmapId) throws JSONException {
         TopicModel model = mf.newTopicModel(topic);
-        ViewProps viewProps = mf.newViewProps(topic.getJSONObject("view_props"));
+        ViewProps viewProps = mf.newViewProps(topic.getJSONObject("viewProps"));
+        viewProps.put("dmx.topicmaps.pinned", false);
         // maybe replace "dm4" prefixes
         long origTopicId = model.getId();
         Topic newTopic = dmx.createTopic(model);
@@ -1145,14 +1152,16 @@ public class ImportExportPlugin extends PluginActivator {
 
     private void createAssociation(JSONObject association, Map<Long, Long> mapTopicIds, long topicmapId) {
         // log.info("Assoc import " + association.toJson());
-        AssocModel assocModel = mf.newAssocModel(association);
-        PlayerModel player1 = assocModel.getPlayer1();
-        // ### Fixme: player1.setPlayerId(mapTopicIds.get(player1.getId()));
-        PlayerModel player2 = assocModel.getPlayer2();
-        // ### Fixme: player2.setPlayerId(mapTopicIds.get(player2.getId()));
-        Assoc newAssociation = dmx.createAssoc(assocModel);
+        AssocModel oldAssocModel = mf.newAssocModel(association);
+        PlayerModel player1 = oldAssocModel.getPlayer1();
+        PlayerModel player2 = oldAssocModel.getPlayer2();
+        AssocModel newAssocModel = mf.newAssocModel(oldAssocModel.getTypeUri(),
+                mf.newTopicPlayerModel(mapTopicIds.get(player1.getId()), player1.getRoleTypeUri()),
+                mf.newTopicPlayerModel(mapTopicIds.get(player2.getId()), player2.getRoleTypeUri()),
+                        oldAssocModel.getChildTopicsModel());
+        Assoc newAssociation = dmx.createAssoc(newAssocModel);
         long assocId = newAssociation.getId();
-        topicmaps.addAssocToTopicmap(topicmapId, assocId, mf.newViewProps(true));
+        topicmaps.addAssocToTopicmap(topicmapId, assocId, mf.newViewProps(true, false));
     }
 
 }
