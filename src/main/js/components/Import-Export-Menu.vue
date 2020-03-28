@@ -1,12 +1,9 @@
 <template>
-
     <div>
-
-        <div class="dm5-import-export-commands">
+        <div class="dm5-import-export-commands" v-if="loggedIn">
           <el-button type="text" class="fa fa-save" title="Export Topicmap to SVG" @click="exportTopicmapSVG">
           </el-button>
         </div>
-
         <div v-if="bookmarksDialogVisible">
             <el-dialog :close="listenClose" visible="true" title="Import Bookmarks"
                 width="30%" :show-close="false">
@@ -22,9 +19,7 @@
               </span>
             </el-dialog>
         </div>
-
     </div>
-
 </template>
 
 <script>
@@ -49,6 +44,9 @@ export default {
     },
     file () {
       return this.$store.state.importexport.topic
+    },
+    loggedIn () {
+      return (this.$store.state.accesscontrol.username)
     }
   },
 
@@ -66,17 +64,17 @@ export default {
     },
     exportTopicmapSVG() {
       // Utilizes "dmx_topicmap_id" cookie
-      this.http.post('/import-export/topicmap/export/svg')
+      this.http.post('/import-export/topicmap/export/json')
         .then(response => {
           const fileTopic = response.data
           this.$store.dispatch("revealTopic", { topic: new this.dm5.Topic(fileTopic), select: true })
         })
     },
     listenClose() {
-      this.$store.dispatch("closeResizeDialog")
+      this.$store.dispatch("closeBookmarksImportDialog")
     },
     closeDialog() {
-      this.$store.dispatch("closeResizeDialog")
+      this.$store.dispatch("closeBookmarksImportDialog")
     }
   }
 }

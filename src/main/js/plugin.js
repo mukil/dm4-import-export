@@ -1,39 +1,48 @@
 export default ({store, dm5, axios, Vue}) => {
-    
-  const CHROMIUM_ENDPOINT = "/import-export/import/bookmarks/chromium"
-  const FIREFOX_ENDPOINT = "/import-export/import/bookmarks/firefox"
-  const ZOTERO_ENDPOINT = "/import-export/import/bookmarks/zotero-report"
-
-  let selectedEndpoint = FIREFOX_ENDPOINT
 
   return {
-    
+
     init () {
       store.dispatch("registerUploadHandler", {
         mimeTypes: ["application/json", "text/html"], // mimeType or file name ending in UPPERCASE, Fixme: multiple values, e.g. PNG;JPEG;JPG;
-        action: "/import-export/import/bookmarks/chromium",
+        action: "/import-export/import/topicmap",
         selected: function(file, fileList) {
-          console.log("[Import Export] upload dialog change selected for upload", fileList)
+          if (file.raw.type.indexOf("html") !== -1) {
+            store.dispatch("setUploadDialogOptions", {
+              options: [
+                {value: "chrome", label: "Chromium", action: "/import-export/import/bookmarks/chromium"}, 
+                {value: "zotero", label: "Zotero Report" , action: "/import-export/import/bookmarks/zotero-report"}
+              ],
+              optionsMessage: "What is the origin of this bookmarks file?"
+            })
+          } else if (file.raw.type.indexOf("json") !== -1) {
+            store.dispatch("setUploadDialogOptions", {
+              options: [
+                {value: "topicmap", label: "DMX Topicmap", action: "/import-export/import/topicmap"},
+                {value: "firefox", label: "Firefox Bookmarks", action: "/import-export/import/bookmarks/firefox"}
+              ],
+              optionsMessage: "What do you want to import?"
+            })
+          }
         },
         success: function(response, file, fileList) {
-          consoe.log("[Import Export] Successful", response)
-          this.$store.dispatch("revealTopicById", response.id)
+          console.log("[Import Export] Successful", response)
+          store.dispatch("revealTopicById", response.topic_id)
           this.$notify({
-            title: 'Import Successful', type: 'success'
+            title: 'Import Successful', type: 'success', message: response.message
           })
-          this.$store.dispatch("closeUploadDialog")
+          store.dispatch("closeUploadDialog")
         },
         error: function(error, file, fileList) {
           console.log("[Import Export] file upload error", error)
           this.$notify.error({
             title: 'Import Failed', message: 'Error: ' + JSON.stringify(error)
           })
-          this.$store.dispatch("closeBookmarksImportDialog")
-          this.$store.dispatch("closeJsonImportDialog")
+          store.dispatch("closeUploadDialog")
         }
       })
     },
-    
+
     storeModule: {
       name: 'importexport',
       module: require('./importexport-store').default
@@ -42,21 +51,22 @@ export default ({store, dm5, axios, Vue}) => {
     components: [{
       comp: require('./components/Import-Export-Menu').default,
       mount: 'toolbar-left'
-    }],
+    }]/** ,
 
     contextCommands: {
       topic: topic => {
         if (topic.typeUri === 'dmx.files.file') {
+          let isLoggedIn = (store.state.accesscontrol.username) ? true : false
           let isHtmlFile = (topic.value.indexOf('.html') != -1) // Fixme: Do the right thing.
           let isJsonFile = (topic.value.indexOf('.json') != -1) // Fixme: Do the right thing.
-          if (isHtmlFile) {
+          if (isLoggedIn && isHtmlFile) {
             return [{
               label: '<i title="Import Bookmarks" class="fa fa-bookmark-o"></i> Import',
               handler: id => {
                 store.dispatch("openBookmarksImportDialog", topic)
               }
             }]
-          } else if (isJsonFile) {
+          } else if (isLoggedIn && isJsonFile) {
             return [{
               label: 'Import JSON',
               handler: id => {
@@ -67,7 +77,7 @@ export default ({store, dm5, axios, Vue}) => {
         }
       }
     }
-  }
+  } **/
 
 }
 

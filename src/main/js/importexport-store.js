@@ -8,7 +8,10 @@ const actions = {
 
   openBookmarksImportDialog({state}, topic) {
     state.bookmarksDialogVisible = true
-    state.topic = topic
+    /** if (topic) {
+      state.topic = topic
+      console.log("Set File Topic for Bookmarks Import", topic)
+    } **/
   },
   closeBookmarksImportDialog() {
     state.bookmarksDialogVisible = false
