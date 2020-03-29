@@ -699,8 +699,8 @@ public class ImportExportPlugin extends PluginActivator {
                 }
             }
             log.info("#### Mapping Firefox Bookmarks Backup COMPLETE: Created " + webResourcesCreatedCount + " new web resources ####");
-            return "{\"message\": \"All valid bookmarks contained in the Firefox backup file were successfully mapped to "
-                + "<em>Bookmarks</em>.\", \"topic_id\": "+importedNote.getId()+"}";
+            return "{\"message\": \"All valid entries contained in the Firefox backup file were imported as "
+                + "Bookmarks.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Bookmarks from Firefox Bookmarks Backup FAILED", e);
         }
@@ -732,8 +732,8 @@ public class ImportExportPlugin extends PluginActivator {
                 }
             }
             log.info("#### Mapping Chromium Bookmarks Backup to Bookmarks COMPLETED ####");
-            return "{\"message\": \"All valid bookmarks contained in the Chrome backup file were successfully mapped to "
-                + "<em>Bookmarks</em>.\", \"topic_id\": "+importedNote.getId()+"}";
+            return "{\"message\": \"All valid entries contained in the Chromium backup file were turned imported as "
+                + "Bookmarks.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Bookmarks from Chromium Bookmarks file FAILED", e);
         }
@@ -760,8 +760,8 @@ public class ImportExportPlugin extends PluginActivator {
                 transformZoteroWebpageEntry(importedNote, webpage);
             }
             log.info("#### Mapping Zotero Report Bookmarks to Bookmarks COMPLETED ####");
-            return "{\"message\": \"All valid webpages in the zotero report file were successfully mapped to "
-                + "<em>Bookmarks</em>.\", \"topic_id\": "+importedNote.getId()+"}";
+            return "{\"message\": \"All valid webpage entries in the zotero report file were imported as "
+                + "Bookmarks.\", \"topic_id\": "+importedNote.getId()+"}";
         } catch (Exception e) {
             throw new RuntimeException("Importing Bookmarks from Zotero Report Bookmarks file FAILED", e);
         }
@@ -839,6 +839,8 @@ public class ImportExportPlugin extends PluginActivator {
             } else {
                 log.warning("Could not detect " + bookmarkDescription + " lastModified timestamp, setting it NOW, DEBUG: " + childEntry.toString());
             }
+            log.info("### Processing firefox link entry  \"" + bookmarkUrl + "\", Added: "
+                + new Date(dateAdded).toLocaleString() +  ", Modified: " + new Date(lastModified).toLocaleString());
             return getOrCreateWebResource(bookmarkUrl, bookmarkDescription, dateAdded, lastModified);
         } catch (JSONException ex) {
             Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
@@ -861,18 +863,22 @@ public class ImportExportPlugin extends PluginActivator {
             String linkName = element.text();
             String linkAddedValue = element.attr("add_date");
             String linkModifiedValue = element.attr("last_modified");
-            long linkAdded = new Date().getTime();
-            long linkModified = new Date().getTime();
+            long linkAdded = 0, linkModified = 0;
+            Date customDateAdded = new Date();
+            Date customDateModified = new Date();
             if (!linkAddedValue.isEmpty()) {
-                linkAdded = Long.parseLong(linkAddedValue);
+                linkAdded = Long.parseLong(linkAddedValue)*1000;
+                customDateAdded = new Date(linkAdded);
             }
             if (!linkModifiedValue.isEmpty()) {
-                linkModified = Long.parseLong(linkModifiedValue);
+                log.info("Chromium linkedModified => " + linkModifiedValue);
+                linkModified = Long.parseLong(linkModifiedValue)*1000;
+                customDateModified = new Date(linkModifiedValue);
             }
-            /* String associatedWithMessage = (toBeRelated != null) ? ", Associate with : " + toBeRelated.getSimpleValue() + "" : "";
+            /* String associatedWithMessage = (toBeRelated != null) ? ", Associate with : " + toBeRelated.getSimpleValue() + "" : ""; **/
             log.info("### Processing chromium link entry  \"" + linkName + "\" (" + linkHref + "), Added: "
-                + new Date(linkAdded*1000).toLocaleString() + associatedWithMessage); **/
-            Topic webResource = getOrCreateWebResource(linkHref, linkName, linkAdded, linkModified);
+                + customDateAdded.toLocaleString() +  " (value=" + linkAddedValue+ "), Modified: " + customDateModified.toLocaleString() + "(value=" + linkModifiedValue+ ")");
+            Topic webResource = getOrCreateWebResource(linkHref, linkName, customDateAdded.getTime(), customDateModified.getTime());
             createBookmarkRelations(importedNote, webResource, toBeRelated);
         } else if (element.nodeName().equals("h3")) {
             String text = element.ownText().trim();
@@ -997,8 +1003,8 @@ public class ImportExportPlugin extends PluginActivator {
         ChildTopicsModel childValues = mf.newChildTopicsModel();
         childValues.put("dmx.notes.title", "Bookmarks Import, " + fileName + " by " + acl.getUsername());
         childValues.put("dmx.notes.text", "This note relates all bookmarks created through an import process done by " + acl.getUsername() + " "
-            + "(Filename: " + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
-            + "bookmarks where imported when, by whom using which backup file.");
+            + "(" + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
+            + "bookmarks where imported when, by whom using which file.");
         Topic importerNote = dmx.createTopic(mf.newTopicModel("dmx.notes.note", childValues));
         log.info("### Importer Note Topic for \""+fileName+"\" CREATED");
         return importerNote;
