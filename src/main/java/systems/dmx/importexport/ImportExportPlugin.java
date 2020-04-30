@@ -254,7 +254,7 @@ public class ImportExportPlugin extends PluginActivator {
     @GET
     @Path("/import/file/{fileTopidId}")
     @Transactional
-    public Response importContentsFromJsonFile(@PathParam("fileTopidId") long fileTopicId) {
+    public Response importContentsBackupJson(@PathParam("fileTopidId") long fileTopicId) {
         try {
             log.info("FileTopicID to be imported: " + fileTopicId);
             String content = getFileContentsAsString(fileTopicId);
@@ -281,7 +281,7 @@ public class ImportExportPlugin extends PluginActivator {
     @GET
     @Path("/import/file/{fileTopidId}/topicmaps")
     @Transactional
-    public Response importTopicmapsFromJsonFile(@PathParam("fileTopidId") long fileTopicId) {
+    public Response importTopicmapsBackupJson(@PathParam("fileTopidId") long fileTopicId) {
         try {
             log.info("FileTopicID to be imported: " + fileTopicId);
             String content = getFileContentsAsString(fileTopicId);
@@ -653,7 +653,7 @@ public class ImportExportPlugin extends PluginActivator {
             JSONArray topicsArray = topicmap.getJSONArray("topics");
 
             String origTopicmapName = info.getString("value");
-            // ### Todo: Currently we import topicmaps withut their viewprops (translation)
+            // ### Todo: Currently we import topicmaps without their viewprops (translation)
             Topic importedTopicmap =
                     topicmaps.createTopicmap("Imported: " + origTopicmapName, "dmx.topicmaps.topicmap", null);
             long topicmapId = importedTopicmap.getId();
@@ -1079,7 +1079,7 @@ public class ImportExportPlugin extends PluginActivator {
                 JSONObject topic = topicsArray.getJSONObject(i);
                 createTopic(topic, mapTopicIds, topicmapId);
             } catch (Exception e) {
-                log.warning("Topic NOT imported!!" + e);
+                log.warning("Topic NOT imported, caused by \"" + e.getCause().getLocalizedMessage().toString() + "\"");
             }
         }
     }
@@ -1091,7 +1091,13 @@ public class ImportExportPlugin extends PluginActivator {
                 JSONObject association = assocsArray.getJSONObject(i);
                 createAssociation(association, mapTopicIds, topicmapId);
             } catch (Exception e) {
-                log.warning("Assoc NOT imported");
+                if (e.getCause() != null) {
+                    log.warning("Assoc NOT imported, caused by \"" + e.getCause().getLocalizedMessage().toString() + "\"");
+                } else {
+                    log.warning("Assoc NOT imported, caused by \"" + e.getLocalizedMessage() + "\"");
+                    throw new RuntimeException(e);
+                }
+                
             }
         }
     }
@@ -1156,18 +1162,32 @@ public class ImportExportPlugin extends PluginActivator {
         topicmaps.addTopicToTopicmap(topicmapId, topicId, viewProps);
     }
 
+    /** Todo: Currently only associations between topics are re-created, not assocs to/from an assoc. **/
     private void createAssociation(JSONObject association, Map<Long, Long> mapTopicIds, long topicmapId) {
-        // log.info("Assoc import " + association.toJson());
+        log.info("Imported mapTopics map size/count: " + mapTopicIds.size());
         AssocModel oldAssocModel = mf.newAssocModel(association);
         PlayerModel player1 = oldAssocModel.getPlayer1();
         PlayerModel player2 = oldAssocModel.getPlayer2();
-        AssocModel newAssocModel = mf.newAssocModel(oldAssocModel.getTypeUri(),
-                mf.newTopicPlayerModel(mapTopicIds.get(player1.getId()), player1.getRoleTypeUri()),
-                mf.newTopicPlayerModel(mapTopicIds.get(player2.getId()), player2.getRoleTypeUri()),
-                        oldAssocModel.getChildTopicsModel());
-        Assoc newAssociation = dmx.createAssoc(newAssocModel);
-        long assocId = newAssociation.getId();
-        topicmaps.addAssocToTopicmap(topicmapId, assocId, mf.newViewProps(true, false));
+        if (player1 != null && player2 != null) {
+            long newPlayer1Id = mapTopicIds.getOrDefault(player1.getId(), new Long(-1));
+            long newPlayer2Id = mapTopicIds.getOrDefault(player2.getId(), new Long(-1));
+            if (newPlayer1Id == -1 || newPlayer2Id == -1) {
+                AssocModel newAssocModel = mf.newAssocModel(oldAssocModel.getTypeUri(),
+                    mf.newTopicPlayerModel(newPlayer1Id, player1.getRoleTypeUri()),
+                    mf.newTopicPlayerModel(newPlayer2Id, player2.getRoleTypeUri()),
+                            oldAssocModel.getChildTopicsModel());
+                Assoc newAssociation = dmx.createAssoc(newAssocModel);
+                long assocId = newAssociation.getId();
+                topicmaps.addAssocToTopicmap(topicmapId, assocId, mf.newViewProps(true, false));
+            } else  {
+               log.warning("Could not re-create assoc due to failure reading topicIds from topcIds map for "
+                        + "oldAssocModel=\"" + oldAssocModel + "\", probably some topics could not be "
+                        + "imported succesfully and the topicIds printed here are involved in previous errors."); 
+            }
+        } else {
+            log.warning("Could not re-create assoc due to failure reading players from "
+                    + "oldAssocModel=\"" + oldAssocModel + "\"");
+        }
     }
 
 }

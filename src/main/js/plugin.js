@@ -47,10 +47,16 @@ export default ({store, dm5, axios, Vue}) => {
       module: require('./importexport-store').default
     },
 
-    components: [{
-      comp: require('./components/Import-Export-Menu').default,
-      mount: 'toolbar-left'
-    }]
+    components: [
+      {
+        comp: require('./components/Export-Dialog-Menu').default,
+        mount: 'webclient'
+      },
+      {
+        comp: require('./components/Import-Export-Command').default,
+        mount: 'toolbar-left'
+      }
+    ]
   }
   
   /** ,

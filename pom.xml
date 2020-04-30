@@ -12,7 +12,7 @@
     <parent>
         <groupId>systems.dmx</groupId>
         <artifactId>dmx-plugin</artifactId>
-        <version>5.0-beta-7-SNAPSHOT</version>
+        <version>5.0-beta-7</version>
     </parent>
 
     <!--properties>
@@ -23,22 +23,22 @@
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-topicmaps</artifactId>
-            <version>5.0-beta-7-SNAPSHOT</version>
+            <version>5.0-beta-7</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-files</artifactId>
-            <version>5.0-beta-7-SNAPSHOT</version>
+            <version>5.0-beta-7</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-accesscontrol</artifactId>
-            <version>5.0-beta-7-SNAPSHOT</version>
+            <version>5.0-beta-7</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-workspaces</artifactId>
-            <version>5.0-beta-7-SNAPSHOT</version>
+            <version>5.0-beta-7</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>

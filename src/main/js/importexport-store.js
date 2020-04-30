@@ -1,20 +1,21 @@
 const state = {
-  bookmarksDialogVisible: false,
+  exportDialogVisible: false,
   jsonDialogVisible: false,
   topic: undefined
 }
 
 const actions = {
 
-  openBookmarksImportDialog({state}, topic) {
-    state.bookmarksDialogVisible = true
+  openExportDialog({state}) {
+    state.exportDialogVisible = true
+    console.log("exportTopicmapsDialog, state", state)
     /** if (topic) {
       state.topic = topic
       console.log("Set File Topic for Bookmarks Import", topic)
     } **/
   },
-  closeBookmarksImportDialog() {
-    state.bookmarksDialogVisible = false
+  closeExportDialog() {
+    state.exportDialogVisible = false
   },
   openJsonImportDialog({state}, topic) {
     state.jsonDialogVisible = true
