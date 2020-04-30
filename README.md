@@ -1,32 +1,34 @@
-DeepaMehta 4 Import Export
-==========================
+DMX Import Export
+=================
 
-A DeepaMehta plugin to save Topicmaps as SVG Documents.
+A DMX plugin to 
 
+- Export single DMX Topicmaps (JSON)
+- Import single DMX Topicmaps (JSON)
+- Import Firefox Bookmarks Backup Files (JSON)
+- Import Chrome/Chromium Bookmarks Backups (HTML)
+Usage
+-----
+Next to the Topicmap dropdown menu:
+
+- Export: Trigger the "Export Topicmap" command if you want to save the current Topicmap as JSON file
+- Import: Trigger the "Upload Dialog" command and select your file to import. You will be guided through the import process.
 
 Requirements
 ------------
 
-A DeepaMehta 4.7 installation
+A DMX 5.0-beta-7 installation
 https://github.com/jri/deepamehta#readme
 
 
 Installation
 ------------
 
-1. Download the DM4 Import/Export plugin:
+1. Download the DMX Import/Export plugin:
 
-2. Move the DM4 Import/Export plugin to the deepamehta-4.7/bundle folder.
+2. Move the DMX Import/Export plugin to the `dmx/bundle-deploy` folder.
 
-3. Restart DeepaMehta.
-
-
-Usage
------
-In the Topicmap dropdown menu:
-
-Select "Export Topicmap to SVG" if you want to save the current Topicmap as an image in SVG format
-
+3. Restart DMX.
 
 Research
 --------
@@ -41,12 +43,12 @@ Research
 Version History
 ---------------
 
-**0.8.0, Upcoming
+**0.8.0** Upcoming
 
-* Adapted to be compatible with DMX 5.0-beta-5
-* Changed package names
-
-**0.7**, Upcoming
+* Adapted Bookmarks import to be compatible with DMX 5.0-beta-7
+* Adapted Topicmaps import to be compatible with DMX 5.0-beta-7
+* Import process integrated into the [dmx-upload-dialog](https://github.com/mukil/dmx-upload-dialog) module
+* Adapted package names and changed License to AGPL
 
 **0.6**, Apr 27, 2019
 
@@ -82,6 +84,7 @@ Version History
 Authors:
 --------
 
-Carolina Garcia, 2014 [abriraqui.net](http://www.abriraqui.net)
-Malte Reißig, 2015-2019 [mikromedia.de](http://www.mikromedia.de)
+Malte Reißig, (C) 2015-2020 [mikromedia.de](http://www.mikromedia.de)<br/>
+Carolina Garcia, (C) 2014 [abriraqui.net](http://www.abriraqui.net)
+
 
