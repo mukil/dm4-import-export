@@ -417,7 +417,8 @@ public class ImportExportPlugin extends PluginActivator {
                         String newRoleType2 = role2.getString("role_type_uri").replace("dm4", "dmx");
                         try {
                             // Check if assoc already exists between player1 and player2
-                            Assoc exists = dmx.getAssoc(assocTypeUri, newPlayer1Id, newPlayer2Id, newRoleType1, newRoleType2);
+                            // Todo: Implement this for the case of assocs between Topics and Assocs and between Assocs and Assocs
+                            Assoc exists = dmx.getAssocBetweenTopicAndTopic(assocTypeUri, newPlayer1Id, newPlayer2Id, newRoleType1, newRoleType2);
                             Assoc newAssoc = null;
                             if (exists == null) {
                                 PlayerModel player1 = mf.newTopicPlayerModel(newPlayer1Id, newRoleType1);
@@ -817,7 +818,7 @@ public class ImportExportPlugin extends PluginActivator {
 
     private Topic createTagTopic(String tagName) {
         return dmx.createTopic(mf.newTopicModel("dmx.tags.tag",
-                mf.newChildTopicsModel().put("dmx.tags.tag_name", tagName)));
+                mf.newChildTopicsModel().set("dmx.tags.tag_name", tagName)));
     }
     
     private Topic transformFirefoxResourceEntry(JSONObject childEntry) {
@@ -1002,8 +1003,8 @@ public class ImportExportPlugin extends PluginActivator {
 
     private Topic createNoteImportTopic(String fileName) {
         ChildTopicsModel childValues = mf.newChildTopicsModel();
-        childValues.put("dmx.notes.title", "Bookmarks Import, " + fileName + " by " + acl.getUsername());
-        childValues.put("dmx.notes.text", "This note relates all bookmarks created through an import process done by " + acl.getUsername() + " "
+        childValues.set("dmx.notes.title", "Bookmarks Import, " + fileName + " by " + acl.getUsername());
+        childValues.set("dmx.notes.text", "This note relates all bookmarks created through an import process done by " + acl.getUsername() + " "
             + "(" + fileName +"). Please do not delete this note as it might become helpful if you need to identify which "
             + "bookmarks where imported when, by whom using which file.");
         Topic importerNote = dmx.createTopic(mf.newTopicModel("dmx.notes.note", childValues));
@@ -1015,7 +1016,8 @@ public class ImportExportPlugin extends PluginActivator {
         Assoc importedAssoc = null;
         if (importerNote != null) {
             // 1) Check if association to "importerNote" exists
-            importedAssoc = dmx.getAssoc(ASSOCIATION, importerNote.getId(), webResource.getId(), DEFAULT, DEFAULT);
+            // Todo: Implement this for the case of assocs between Topics and Assocs and between Assocs and Assocs
+            importedAssoc = dmx.getAssocBetweenTopicAndTopic(ASSOCIATION, importerNote.getId(), webResource.getId(), DEFAULT, DEFAULT);
             if (importedAssoc == null) {
                 // 2) Create association to "importerNote" exists
                 importedAssoc = dmx.createAssoc(mf.newAssocModel(ASSOCIATION,
@@ -1031,7 +1033,8 @@ public class ImportExportPlugin extends PluginActivator {
 
     private Assoc getOrCreateSimpleAssoc(Topic defaultPlayer1, Topic defaultPlayer2) {
         // 3) Check and create assoc to folderNameTag
-        Assoc folderTagAssoc = dmx.getAssoc(ASSOCIATION, defaultPlayer1.getId(), defaultPlayer2.getId(),
+        // Todo: Implement this for the case of assocs between Topics and Assocs and between Assocs and Assocs
+        Assoc folderTagAssoc = dmx.getAssocBetweenTopicAndTopic(ASSOCIATION, defaultPlayer1.getId(), defaultPlayer2.getId(),
             PARENT, CHILD);
         if (folderTagAssoc == null) {
             // 4) Create assoc from webResource to folderNameTag
@@ -1063,8 +1066,8 @@ public class ImportExportPlugin extends PluginActivator {
         }
         // 2) Create new Bookmark Topic
         ChildTopicsModel childValues = mf.newChildTopicsModel();
-        childValues.put("dmx.base.url", url.trim());
-        childValues.put("dmx.bookmarks.description", description);
+        childValues.set("dmx.base.url", url.trim());
+        childValues.set("dmx.bookmarks.description", description);
         webResource = dmx.createTopic(mf.newTopicModel("dmx.bookmarks.bookmark", childValues));
         if (created != 0) webResource.setProperty(DMX_TIME_CREATED, created, true);
         // lastModified is anyway overwritten by dm4-times plugin as (i guess) setting the timepropery is an udpate in itself
@@ -1154,7 +1157,7 @@ public class ImportExportPlugin extends PluginActivator {
     private void createTopic(JSONObject topic, Map<Long, Long> mapTopicIds, long topicmapId) throws JSONException {
         TopicModel model = mf.newTopicModel(topic);
         ViewProps viewProps = mf.newViewProps(topic.getJSONObject("viewProps"));
-        viewProps.put("dmx.topicmaps.pinned", false);
+        viewProps.set("dmx.topicmaps.pinned", false);
         // maybe replace "dm4" prefixes
         long origTopicId = model.getId();
         Topic newTopic = dmx.createTopic(model);
@@ -1176,7 +1179,7 @@ public class ImportExportPlugin extends PluginActivator {
                 AssocModel newAssocModel = mf.newAssocModel(oldAssocModel.getTypeUri(),
                     mf.newTopicPlayerModel(newPlayer1Id, player1.getRoleTypeUri()),
                     mf.newTopicPlayerModel(newPlayer2Id, player2.getRoleTypeUri()),
-                            oldAssocModel.getChildTopicsModel());
+                            oldAssocModel.getChildTopics());
                 Assoc newAssociation = dmx.createAssoc(newAssocModel);
                 long assocId = newAssociation.getId();
                 topicmaps.addAssocToTopicmap(topicmapId, assocId, mf.newViewProps(true, false));
