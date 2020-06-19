@@ -1,7 +1,7 @@
 DMX Import Export
 =================
 
-A DMX plugin to 
+A DMX plugin to
 
 - Export single DMX Topicmaps (JSON)
 - Import single DMX Topicmaps (JSON)
@@ -18,8 +18,10 @@ Next to the Topicmap dropdown menu:
 Requirements
 ------------
 
-A DMX 5.0-beta-7 installation
+Java 8+ and DMX 5.0-beta-7.
 https://github.com/jri/deepamehta#readme
+
+Note: The availability of the file-upload GUI depends on a maintenance SNAPSHOT of the DMX 5.0-beta-7 release done at Apr 4, 2020 ([this one](https://download.dmx.systems/ci/dmx-5.0-SNAPSHOT_2020-04-04_9552.zip)).
 
 
 Installation
@@ -29,14 +31,12 @@ Installation
 
 2. Move the DMX Import/Export plugin to the `dmx/bundle-deploy` folder.
 
-3. Restart DMX.
+Research / Todos
+----------------
 
-Research
---------
-
-- Improve exported SVG Document about using Defs:
+- Improve exported SVG Document about using `Defs`:
   [http://www.w3.org/TR/SVG11/struct.html#DefsElement](http://www.w3.org/TR/SVG11/struct.html#DefsElement)
-- Test improved text export (e.g. with Inkscape) about textArea:
+- Test improved `text` export (e.g. with Inkscape) about textArea:
   [http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement](http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement)
 - Investigate if wheter [.graphml](https://en.wikipedia.org/wiki/GraphML) (e.g. for yEd) or `.mm` (used in Freemind) is another valuable export format. I currently assume that `.mm` is to restricted to house topic maps (cause mind maps usually have _one_ central topic not many) and one topicmap would translate to many mind maps (one for each "cluster" in the topic map).
 
@@ -50,12 +50,12 @@ All third party components incorporated into the DMX Import Export Software are 
 Version History
 ---------------
 
-**0.8.0** Upcoming
+**0.8.0** June 19, 2020
 
 * Adapted Bookmarks import to be compatible with DMX 5.0-beta-7
 * Adapted Topicmaps import to be compatible with DMX 5.0-beta-7
 * Import process integrated into the [dmx-upload-dialog](https://github.com/mukil/dmx-upload-dialog) module
-* Adapted package names and changed License to AGPL
+* Adapted package names and changed License to AGPL 3.0
 
 **0.6**, Apr 27, 2019
 

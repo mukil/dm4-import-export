@@ -180,6 +180,7 @@ public class ImportExportPlugin extends PluginActivator {
         }
     }
 
+    /** Fixme: Check if we the consumed entity is actually ever used by a HTTP client and refactor resource. **/
     @GET
     @Transactional
     @Path("/content/json/{typeUri}")

@@ -1,9 +1,9 @@
 {
   "name": "dmx-import-export",
-  "version": "1.0.0-SNAPSHOT",
+  "version": "0.8.0",
   "description": "DMX Webclient Import Export",
   "author": "Malte Reißig <malte@dmx.berlin>",
-  "license": "AGPL-3.0-or-later",
+  "license": "AGPL-3.0",
   "repository": {
     "type": "git",
     "url": "https://git.dmx.systems/dmx-plugins/dmx-import-export.git"
