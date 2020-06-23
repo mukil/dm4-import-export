@@ -41,6 +41,7 @@ export default {
     },
     exportTopicmap() {
       // Utilizes "dmx_topicmap_id" cookie
+      // ### Todo: this.showExportTopicmapDialog()
       this.http.post('/import-export/topicmap/export/json')
         .then(response => {
           const fileTopic = response.data

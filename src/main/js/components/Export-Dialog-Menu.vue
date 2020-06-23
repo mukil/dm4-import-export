@@ -1,6 +1,6 @@
 <template>
 
-    <el-dialog :visible="exportTopicmapDialog" :close="listenClose" visible="true" title="Export Topicmap"
+    <el-dialog :visible="exportTopicmapDialog" :close="listenClose" title="Export Topicmap"
         width="400px" :show-close="false">
       <div class="block">
         <el-radio v-model="exportFileType" label="json">JSON</el-radio>
