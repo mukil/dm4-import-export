@@ -1,10 +1,8 @@
 <template>
-
     <div class="dm5-import-export-commands" v-if="loggedIn">
-      <el-button type="text" class="fa fa-save" title="Export Topicmap" @click="exportTopicmap">
+      <el-button type="text" class="fa fa-save" title="Export Topicmap" @click="showExportTopicmapDialog">
       </el-button>
     </div>
-
 </template>
 
 <script>
@@ -15,21 +13,7 @@ export default {
     http: 'axios'
   },
 
-  data () {
-    return {
-        entries: [],
-        selectedItem: '',
-        exportFileType: 'chromium'
-    }
-  },
-
   computed: {
-    exportTopicmapDialog () {
-      return this.$store.state.importexport.exportDialogVisible
-    },
-    file () {
-      return this.$store.state.importexport.topic
-    },
     loggedIn () {
       return (this.$store.state.accesscontrol.username)
     }
@@ -37,22 +21,7 @@ export default {
 
   methods: {
     showExportTopicmapDialog() {
-        this.$store.dispatch("openExportDialog")
-    },
-    exportTopicmap() {
-      // Utilizes "dmx_topicmap_id" cookie
-      // ### Todo: this.showExportTopicmapDialog()
-      this.http.post('/import-export/topicmap/export/json')
-        .then(response => {
-          const fileTopic = response.data
-          this.$store.dispatch("revealTopic", { topic: new this.dm5.Topic(fileTopic), select: true })
-        })
-    },
-    listenClose() {
-      this.$store.dispatch("closeExportDialog")
-    },
-    closeDialog() {
-      this.$store.dispatch("closeExportDialog")
+      this.$store.dispatch("openExportDialog")
     }
   }
 }

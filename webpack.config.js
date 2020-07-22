@@ -43,5 +43,13 @@ module.exports = {
       filename: '[contenthash].style.css'
     }),
     new VueLoaderPlugin()
-  ]
+  ],
+  stats: {
+    entrypoints: false,
+    assetsSort: 'chunks'
+  },
+  performance: {
+    hints: false
+  }
+
 }

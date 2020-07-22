@@ -58,9 +58,8 @@ export default ({store, dm5, axios, Vue}) => {
       }
     ]
   }
-  
-  /** ,
 
+  /** ,
     contextCommands: {
       topic: topic => {
       // Todo: Create Export Commands

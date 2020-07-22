@@ -57,8 +57,12 @@ import systems.dmx.files.FilesService;
 import systems.dmx.files.StoredFile;
 import systems.dmx.files.UploadedFile;
 import systems.dmx.accesscontrol.AccessControlService;
+import static systems.dmx.core.Constants.ASSOC_TYPE;
+import static systems.dmx.core.Constants.TOPIC_TYPE;
+import static systems.dmx.topicmaps.Constants.TOPICMAP;
 import systems.dmx.topicmaps.Topicmap;
 import systems.dmx.topicmaps.TopicmapsService;
+import static systems.dmx.workspaces.Constants.WORKSPACE;
 import systems.dmx.workspaces.WorkspacesService;
 
 @Path("/import-export")
@@ -81,6 +85,8 @@ public class ImportExportPlugin extends PluginActivator {
 
     private static final String DMX_TIME_CREATED = "dmx.timestamps.created";
     private static final String DMX_TIME_MODIFIED = "dmx.timestamps.modified";
+    
+    private static final String SYMBOLIC_BUNDLE_URI = "systems.dmx.import-export";
 
     // Zotero Report Column Header Names seem to be internationalized...
     private static final String ZOTERO_ENTRY_TYPE_COLUMN_KEY = "Typ";
@@ -110,7 +116,7 @@ public class ImportExportPlugin extends PluginActivator {
                 exportTopicsAndAssocsToJSON(type.getUri(), configuredAssocTypes, json);
             }
             // 4) export topicmaps topics with their current workspace assignment
-            List<Topic> topicmaps = dmx.getTopicsByType("dmx.topicmaps.topicmap");
+            List<Topic> topicmaps = dmx.getTopicsByType(TOPICMAP);
             json.put("topicmaps", new JSONArray());
             for (Topic topicmap : topicmaps) {
                 log.info("### Exporting topicmap \"" + topicmap.getSimpleValue() + "\" ...");
@@ -129,7 +135,7 @@ public class ImportExportPlugin extends PluginActivator {
     private void addWorkspaceTopicsToExport(JSONObject json) {
         try {
             json.put("workspaces", new JSONArray());
-            Iterable<Topic> allWorksapces = dmx.getTopicsByType("dmx.workspaces.workspace");
+            Iterable<Topic> allWorksapces = dmx.getTopicsByType(WORKSPACE);
             Iterator<Topic> workspaces = allWorksapces.iterator();
             log.info("### Exporting workspace topics ...");
             while (workspaces.hasNext()) {
@@ -149,14 +155,14 @@ public class ImportExportPlugin extends PluginActivator {
         Topic plugin = dmx.getTopicByUri("systems.dmx.import-export");
         log.info("Loaded " + plugin.getSimpleValue() + " plugin topic for inspecting export type configuration");
         List<RelatedTopic> configuredTypes = plugin.getRelatedTopics(ASSOCIATION, DEFAULT,
-                DEFAULT, "dmx.core.topic_type");
+                DEFAULT, TOPIC_TYPE);
         return configuredTypes;
     }
 
     private List<RelatedTopic> getConfiguredAssocTypesForExport() {
-        Topic plugin = dmx.getTopicByUri("systems.dmx.import-export");
+        Topic plugin = dmx.getTopicByUri(SYMBOLIC_BUNDLE_URI);
         List<RelatedTopic> configuredAssocTypes = plugin.getRelatedTopics(ASSOCIATION, DEFAULT,
-                DEFAULT, "dmx.core.assoc_type");
+                DEFAULT, ASSOC_TYPE);
         return configuredAssocTypes;
     }
 
@@ -235,7 +241,7 @@ public class ImportExportPlugin extends PluginActivator {
         String operation = "Uploaded File " + file + " for importing " + htmlOrJson.toUpperCase();
         try {
             log.info(operation);
-            StoredFile storedFile = files.storeFile(file, "/");
+            StoredFile storedFile = files.storeFile(file, files.pathPrefix() + File.separator);
             return dmx.getTopic(storedFile.getFileTopicId());
         } catch (Exception e) {
             throw new RuntimeException(operation + " failed", e);
@@ -460,7 +466,7 @@ public class ImportExportPlugin extends PluginActivator {
             String translationValuePair = translation.getString("value");
             String[] pos = translationValuePair.split(" ");
             // creating topicmap
-            Topic map = topicmaps.createTopicmap(state.getString("value"), "dmx.topicmaps.topicmap",
+            Topic map = topicmaps.createTopicmap(state.getString("value"), TOPICMAP,
                     mf.newViewProps(Integer.parseInt(pos[0]), Integer.parseInt(pos[1])));
             log.info("### Imported Topicmap " + state.getString("value") + "... new Topicmap ID => " + map.getId());
             log.info("Topicmap Translation Set: " + translationValuePair.toString()
@@ -521,7 +527,7 @@ public class ImportExportPlugin extends PluginActivator {
         topicJSON = topicJSON.replaceAll("type_uri", "typeUri");
         topicJSON = topicJSON.replaceAll("\"id\":[0-9]{1,10},", "\"id\":-1,");
         topicJSON = topicJSON.replaceAll("\"topic_id\":[0-9]{1,10},", "\"topic_id\":-1,");
-        topicJSON = topicJSON.replaceAll("dmx.core.aggregation", "dmx.core.composition");
+        topicJSON = topicJSON.replaceAll("dmx.core.aggregation", COMPOSITION);
         topicJSON = topicJSON.replaceAll("dmx.contacts.institution", "dmx.contacts.organization");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.web_resource", "dmx.bookmarks.bookmark");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.url", "dmx.base.url");
@@ -546,14 +552,15 @@ public class ImportExportPlugin extends PluginActivator {
 
     @POST
     @Transactional
-    @Path("/topicmap/export/json")
-    public Topic exportTopicmapToJSON(@CookieParam("dmx_topicmap_id") long topicmapId) {
+    @Path("/topicmap/{topicmapId}/export/json")
+    public Topic exportTopicmapToJSON(@PathParam("topicmapId") long topicmapId, @CookieParam("dmx_topicmap_id") long topicmapCookie) {
         try {
-            log.info("Exporting Topicmap JSON ######### " + topicmapId);
-            Topicmap topicmap = topicmaps.getTopicmap(topicmapId, true);
+            long useTopicmapId = (topicmapId != 0) ? topicmapId : topicmapCookie;
+            log.info("Exporting Topicmap JSON ######### " + useTopicmapId);
+            Topicmap topicmap = topicmaps.getTopicmap(useTopicmapId, true);
             String json = topicmap.toJSON().toString();
             InputStream in = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            String jsonFileName = "topicmap-" + topicmapId + ".json";
+            String jsonFileName = "topicmap-" + useTopicmapId + ".json";
             return files.createFile(in, files.pathPrefix() + "/" + jsonFileName);
             // return filesService.createFile(in, jsonFileName);
         } catch (Exception e) {
@@ -562,27 +569,28 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     @POST
-    @Path("/topicmap/export/svg")
+    @Path("/topicmap/{topicmapId}/export/svg")
     @Transactional
-    public Topic exportTopicmapToSVG(@CookieParam("dmx_topicmap_id") long topicmapId) throws XMLStreamException {
+    public Topic exportTopicmapToSVG(@PathParam("topicmapId") long topicmapId, @CookieParam("dmx_topicmap_id") long topicmapCookie) throws XMLStreamException {
         final int BOX_HEIGHT = 20;
         final int MARGIN_LEFT = 5;
         final int MARGIN_TOP = 14;
         final int ICON_WIDTH = 16;
         final int ICON_HEIGHT = 16;
         try {
-            log.info("Exporting Topicmap SVG ######### " + topicmapId);
+            long useTopicmapId = (topicmapId != 0) ? topicmapId : topicmapCookie;
+            log.info("Exporting Topicmap SVG ######### " + useTopicmapId);
             // 0) Fetch topicmap data
-            Topicmap topicmap = topicmaps.getTopicmap(topicmapId, true);
+            Topicmap topicmap = topicmaps.getTopicmap(useTopicmapId, true);
             Iterable<ViewTopic> topics = topicmap.getTopics();
             Iterable<ViewAssoc> associations = topicmap.getAssocs();
             // 1) Setup default file name of SVG to write to
-            String svgFileName = "Exported_Topicmap_" + topicmapId + ".svg";
+            String svgFileName = "Exported_Topicmap_" + useTopicmapId + ".svg";
             // 2) Get DM4 filerepo configuration setting and write to document to root folder
             String documentPath = files.getFile("/") + "/" + svgFileName;
             // 3) Create SVGWriter
             SVGRenderer svg = new SVGRenderer(documentPath);
-            svg.startGroupElement(topicmapId);
+            svg.startGroupElement(useTopicmapId);
             // 4) Create all associations
             for (ViewAssoc association : associations) {
                 String valueAssoc = association.getSimpleValue().toString();
@@ -656,14 +664,12 @@ public class ImportExportPlugin extends PluginActivator {
 
             String origTopicmapName = info.getString("value");
             // ### Todo: Currently we import topicmaps without their viewprops (translation)
-            Topic importedTopicmap =
-                    topicmaps.createTopicmap("Imported: " + origTopicmapName, "dmx.topicmaps.topicmap", null);
+            Topic importedTopicmap = topicmaps.createTopicmap("Imported: " + origTopicmapName, TOPICMAP, null);
             long topicmapId = importedTopicmap.getId();
-            log.info("###### importedTopicmapId " + topicmapId);
-            // 
             Map<Long, Long> mapTopicIds = new HashMap();
             importTopics(topicsArray, mapTopicIds, topicmapId);
             importAssociations(assocsArray, mapTopicIds, topicmapId);
+            log.info("Created Topicmap \"" + importedTopicmap.getSimpleValue()+ "\"");
             // Todo: Add error reporting
             return "{\"message\": \"Topicmap successfully restored. \", \"topic_id\": "+importedTopicmap.getId()+"}";
         } catch (Exception e) {
@@ -1078,32 +1084,39 @@ public class ImportExportPlugin extends PluginActivator {
 
     // Import topics
     private void importTopics(JSONArray topicsArray, Map<Long, Long> mapTopicIds, long topicmapId) {
+        int created = 0, failed = 0;
         for (int i = 0, size = topicsArray.length(); i < size; i++) {
             try {
                 JSONObject topic = topicsArray.getJSONObject(i);
                 createTopic(topic, mapTopicIds, topicmapId);
+                created++;
             } catch (Exception e) {
                 log.warning("Topic NOT imported, caused by \"" + e.getCause().getLocalizedMessage().toString() + "\"");
+                failed++;
             }
         }
+        log.info("### " + created + " Topics created, " + failed + " Topics failed during topicmap import");
     }
 
     // Import associations
     private void importAssociations(JSONArray assocsArray, Map<Long, Long> mapTopicIds, long topicmapId) {
+        int created = 0, failed = 0;
         for (int i = 0, size = assocsArray.length(); i < size; i++) {
             try {
                 JSONObject association = assocsArray.getJSONObject(i);
                 createAssociation(association, mapTopicIds, topicmapId);
+                created++;
             } catch (Exception e) {
                 if (e.getCause() != null) {
                     log.warning("Assoc NOT imported, caused by \"" + e.getCause().getLocalizedMessage().toString() + "\"");
+                    failed++;
                 } else {
                     log.warning("Assoc NOT imported, caused by \"" + e.getLocalizedMessage() + "\"");
                     throw new RuntimeException(e);
                 }
-                
             }
         }
+        log.info("### " + created + " Assocs created, " + failed + " Assocs failed during topicmap import");
     }
 
     private String color(String typeUri) {
@@ -1168,7 +1181,6 @@ public class ImportExportPlugin extends PluginActivator {
 
     /** Todo: Currently only associations between topics are re-created, not assocs to/from an assoc. **/
     private void createAssociation(JSONObject association, Map<Long, Long> mapTopicIds, long topicmapId) {
-        log.info("Imported mapTopics map size/count: " + mapTopicIds.size());
         AssocModel oldAssocModel = mf.newAssocModel(association);
         PlayerModel player1 = oldAssocModel.getPlayer1();
         PlayerModel player2 = oldAssocModel.getPlayer2();

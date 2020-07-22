@@ -8,7 +8,7 @@
       </div>
       <span slot="footer" class="dialog-footer">
         <el-button @click="closeDialog">Cancel</el-button>
-        <el-button type="primary" @click="exportTopicmap">Export Topicmap</el-button>
+        <el-button type="primary" @click="doExportTopicmap">Export Topicmap</el-button>
       </span>
     </el-dialog>
 
@@ -17,16 +17,9 @@
 <script>
 export default {
 
-  inject: {
-    dm5: "dm5",
-    http: 'axios'
-  },
-
   data () {
     return {
-        entries: [],
-        selectedItem: '',
-        exportFileType: 'chromium'
+      exportFileType: 'json'
     }
   },
 
@@ -43,17 +36,10 @@ export default {
   },
 
   methods: {
-    showExportTopicmapDialog() {
-        this.$store.dispatch("openExportDialog")
-    },
-    exportTopicmap() {
-      // Utilizes "dmx_topicmap_id" cookie
-      console.log("exportTopicmap type=>", this.exportFileType)
-      this.http.post('/import-export/topicmap/export/json')
-        .then(response => {
-          const fileTopic = response.data
-          this.$store.dispatch("revealTopic", { topic: new this.dm5.Topic(fileTopic), select: true })
-        })
+    doExportTopicmap() {
+      // copy dialog state into plugin store
+      this.$store.state.importexport.exportFileType = this.exportFileType
+      this.$store.dispatch("exportTopicmap")
     },
     listenClose() {
       this.$store.dispatch("closeExportDialog")
