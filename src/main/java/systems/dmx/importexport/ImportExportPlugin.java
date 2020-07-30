@@ -241,7 +241,7 @@ public class ImportExportPlugin extends PluginActivator {
         String operation = "Uploaded File " + file + " for importing " + htmlOrJson.toUpperCase();
         try {
             log.info(operation);
-            StoredFile storedFile = files.storeFile(file, files.pathPrefix() + File.separator);
+            StoredFile storedFile = files.storeFile(file, "/");
             return dmx.getTopic(storedFile.getFileTopicId());
         } catch (Exception e) {
             throw new RuntimeException(operation + " failed", e);
