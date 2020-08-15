@@ -18,11 +18,8 @@ Next to the Topicmap dropdown menu:
 Requirements
 ------------
 
-Java 8+ and DMX 5.0-beta-7.
+Java 8+ and DMX 5.0
 https://github.com/jri/deepamehta#readme
-
-Note: The availability of the file-upload GUI depends on a maintenance SNAPSHOT of the DMX 5.0-beta-7 release done at Apr 4, 2020 ([this one](https://download.dmx.systems/ci/dmx-5.0-SNAPSHOT_2020-04-04_9552.zip)).
-
 
 Installation
 ------------
@@ -31,24 +28,23 @@ Installation
 
 2. Move the DMX Import/Export plugin to the `dmx/bundle-deploy` folder.
 
-Research / Todos
-----------------
-
-- Improve exported SVG Document about using `Defs`:
-  [http://www.w3.org/TR/SVG11/struct.html#DefsElement](http://www.w3.org/TR/SVG11/struct.html#DefsElement)
-- Test improved `text` export (e.g. with Inkscape) about textArea:
-  [http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement](http://www.w3.org/TR/SVGTiny12/text.html#TextAreaElement)
-- Investigate if wheter [.graphml](https://en.wikipedia.org/wiki/GraphML) (e.g. for yEd) or `.mm` (used in Freemind) is another valuable export format. I currently assume that `.mm` is to restricted to house topic maps (cause mind maps usually have _one_ central topic not many) and one topicmap would translate to many mind maps (one for each "cluster" in the topic map).
-
 Licensing
 ---------
 
 DMX Import Export is available freely under the GNU Affero General Public License, version 3.
 
-All third party components incorporated into the DMX Import Export Software are licensed under the original license provided by the owner of the applicable component.
+All third party components incorporated into the DMX Import Export Software are licensed under the original license provided by the owner of the applicable component:
+
+- [jsoup HTML parser](http://jsoup.org/), (C) 2009 - 2020 Jonathan Hedley, MIT Licensed
 
 Version History
 ---------------
+
+**0.9.0** Aug 16, 2020
+
+* Adapted to latest core API changes in DMX 5.0
+* Runs with `per_workspace=true` platform filerepo configuration
+* Added attribution to Jonathan Hedley for `jsoup-1.10.2`
 
 **0.8.0** June 19, 2020
 
