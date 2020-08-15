@@ -23,42 +23,42 @@
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-topicmaps</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-files</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-accesscontrol</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-base</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-bookmarks</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-notes</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-contacts</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <dependency>
             <groupId>systems.dmx</groupId>
             <artifactId>dmx-workspaces</artifactId>
-            <version>5.0-SNAPSHOT</version>
+            <version>5.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>
