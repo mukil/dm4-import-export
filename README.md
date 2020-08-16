@@ -1,12 +1,13 @@
 DMX Import Export
 =================
 
-A DMX plugin to
+A DMX plugin to ...
 
-- Export single DMX Topicmaps (JSON)
+- Export single DMX Topicmaps (JSON, SVG)
 - Import single DMX Topicmaps (JSON)
 - Import Firefox Bookmarks Backup Files (JSON)
 - Import Chrome/Chromium Bookmarks Backups (HTML)
+- Import Bookmarks from Zotero (4.x) HTML Reports
 
 Usage
 -----
