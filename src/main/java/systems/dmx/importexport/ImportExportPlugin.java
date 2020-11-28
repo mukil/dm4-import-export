@@ -419,28 +419,29 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private void createTopicsFromDM4JSON(JSONArray topics) {
-        try {
             for (int i = 0; i < topics.length(); i++) {
-                JSONObject object = topics.getJSONObject(i);
-                JSONObject topic = object.getJSONObject("topic");
-                JSONObject workspace = object.getJSONObject("topic_ws");
-                String wsName = workspace.getString("value");
-                long formerId = topic.getLong("id");
-                String topicJSON = buildDMXJSONTopicModel(topic);
                 try {
-                    Topic newTopic = dmx.createTopic(mf.newTopicModel(new JSONObject(topicJSON)));
-                    log.info("### Imported \"" + newTopic.getType().getUri() + "\" topic \""
-                            + newTopic.getSimpleValue() +"\" (" + newTopic.getId()+")");
-                    topicIds.put(formerId, newTopic.getId());
-                    // ### Fixme: setCreated-Timestamp
-                    log.info("Debug: Assignment of topic to workspace => \"" + wsName + "\" possible");
-                } catch (RuntimeException re) {
-                    Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic " + formerId + " (" + object.getJSONObject("topic") + ") could not be created from DM4 JSON", re);
+                    JSONObject object = topics.getJSONObject(i);
+                    JSONObject topic = object.getJSONObject("topic");
+                    String wsName = object.getString("workspaceName");
+                    long created = object.getLong("created");
+                    long modified = object.getLong("modified");
+                    long formerId = topic.getLong("id");
+                    String topicJSON = buildDMXJSONTopicModel(topic);
+                    try {
+                        Topic newTopic = dmx.createTopic(mf.newTopicModel(new JSONObject(topicJSON)));
+                        log.info("### Imported \"" + newTopic.getType().getUri() + "\" topic \""
+                                + newTopic.getSimpleValue() +"\" (" + newTopic.getId()+")");
+                        topicIds.put(formerId, newTopic.getId());
+                        // ### Fixme: setCreated-Timestamp
+                        log.info("Debug: Assignment of topic to workspace => \"" + wsName + "\" possible, Created: " + created + ", Last Modified: " + modified);
+                    } catch (RuntimeException re) {
+                        Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic " + formerId + " (" + object.getJSONObject("topic") + ") could not be created from DM4 JSON", re);
+                    }
+                } catch (JSONException ex) {
+                    Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic could not be parsed from DM4 JSON", ex);
                 }
             }
-        } catch (JSONException ex) {
-            Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic could not be parsed from DM4 JSON", ex);
-        }
     }
 
     private void createAssociationsFromDM4JSON(JSONArray topics) {
@@ -497,7 +498,7 @@ public class ImportExportPlugin extends PluginActivator {
                             Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Assoc existence check could not fetch assoc", rea);
                         }
                     } catch (NullPointerException npe) {
-                        log.warning("> Player information is not contained in export file (Topic1: " + formerPlayer1 + " <-> Topic2: " + formerPlayer2 + "> Association not imported!");
+                        log.warning("> Player information is not contained in export file (Topic1: " + formerPlayer1 + " <-> Topic2: " + formerPlayer2 + " ) - Association not imported!");
                     }
                 }
             } catch (JSONException ex) {
