@@ -317,7 +317,7 @@ public class ImportExportPlugin extends PluginActivator {
                         addAssocsToTopicmapFromJSON(assocs, map);
                         log.info("Topicmap assocs and topics SUCCESSFULLY restored");
                         // Recreate Topicmap <-> Workspace Assignment
-                        Topic ws = getOrCreateWorkspace(workspace);
+                        Topic ws = getWorkspaceByName(workspace.getString("value"));
                         if (ws != null) {
                             log.info("Topicmap assigned to Workspace => " + ws.getSimpleValue());
                             workspaces.assignToWorkspace(map, ws.getId());
@@ -334,6 +334,24 @@ public class ImportExportPlugin extends PluginActivator {
             throw new RuntimeException(ex);
         }
         return Response.ok(fileTopicId).build();
+    }
+
+    private Topic getWorkspaceByName(String name) {
+        Topic realWs = null;
+        Topic ws = dmx.getTopicByValue("dmx.workspaces.name", new SimpleValue(name)); // ### It worked once but does this still work?
+        if (ws == null) {
+                // double check if it really does not exist yet
+                List<Topic> existingWs = dmx.getTopicsByType("dmx.workspaces.workspace");
+                for (Topic topic : existingWs) {
+                    if (topic.getSimpleValue().toString().equals(name)) {
+                        return topic;
+                    }
+                }
+        } else {
+            realWs = ws.getRelatedTopic(null, CHILD, PARENT, "dmx.workspaces.workspace");
+            return realWs;
+        }
+        return realWs;
     }
 
     private Topic getOrCreateWorkspace(JSONObject workspace) {
@@ -433,7 +451,8 @@ public class ImportExportPlugin extends PluginActivator {
                         log.info("### Imported \"" + newTopic.getType().getUri() + "\" topic \""
                                 + newTopic.getSimpleValue() +"\" (" + newTopic.getId()+")");
                         topicIds.put(formerId, newTopic.getId());
-                        // ### Fixme: setCreated-Timestamp
+                        // ### Fixme: set Created and Modified-Timestamps
+                        workspaces.assignToWorkspace(newTopic, getWorkspaceByName(wsName).getId());
                         log.info("Debug: Assignment of topic to workspace => \"" + wsName + "\" possible, Created: " + created + ", Last Modified: " + modified);
                     } catch (RuntimeException re) {
                         Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic " + formerId + " (" + object.getJSONObject("topic") + ") could not be created from DM4 JSON", re);
@@ -601,6 +620,7 @@ public class ImportExportPlugin extends PluginActivator {
         topicJSON = topicJSON.replaceAll("\"topic_id\":[0-9]{1,10},", "\"topic_id\":-1,");
         topicJSON = topicJSON.replaceAll("dmx.core.aggregation", COMPOSITION);
         topicJSON = topicJSON.replaceAll("dmx.contacts.institution", "dmx.contacts.organization");
+        topicJSON = topicJSON.replaceAll("dmx.contacts.institution_name", "dmx.contacts.organization_name");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.web_resource", "dmx.bookmarks.bookmark");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.webpage", "dmx.bookmarks.bookmark");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.url", "dmx.base.url");
