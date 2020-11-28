@@ -423,13 +423,15 @@ public class ImportExportPlugin extends PluginActivator {
             for (int i = 0; i < topics.length(); i++) {
                 JSONObject object = topics.getJSONObject(i);
                 JSONObject topic = object.getJSONObject("topic");
+                JSONObject workspace = object.getJSONObject("topic_ws");
                 long formerId = topic.getLong("id");
                 String topicJSON = buildDMXJSONTopicModel(topic);
                 try {
-                    // ### Fixme: with or without workspace assignment ???
+                    log.info("Debug: Assignment of topic to workspace => \"" + workspace.toString() + "\" possible");
                     Topic newTopic = dmx.createTopic(mf.newTopicModel(new JSONObject(topicJSON)));
                     log.info("### Imported \"" + newTopic.getType().getUri() + "\" topic \""
                             + newTopic.getSimpleValue() +"\" (" + newTopic.getId()+")");
+                    // ### Fixme: setCreated-Timestamp
                     topicIds.put(formerId, newTopic.getId());
                 } catch (RuntimeException re) {
                     Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic " + formerId + " (" + object.getJSONObject("topic") + ") could not be created from DM4 JSON", re);
@@ -441,6 +443,10 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private void createAssociationsFromDM4JSON(JSONArray topics) {
+        // ### Fixme: Certain topics may be already pre-installed (such as "Standard Website" e.g. by webpages)
+        // and thus can't be linked to by topicId (as that is unknown to the dump).
+        // Solution: We would need to support to re-create assocs not only by ID, but also by URI.
+        // Which would need to be retrofitted to the exporter in the dm4 branch.
         for (int k = 0; k < topics.length(); k++) {
             try {
                 JSONObject topic = topics.getJSONObject(k);
@@ -560,7 +566,7 @@ public class ImportExportPlugin extends PluginActivator {
                     topicmaps.addTopicToTopicmap(map.getId(), newTopicId, mf.newViewProps(posX, posY, visibility, false));
                     log.fine("Added topic " + topic.getString("value") + " to topicmap " + map.getSimpleValue());
                 } catch (Exception e) {
-                    log.warning("> Error adding " + formerTopicId + " (\""+ typeUri+ "\") was not contained in export file " + e + " - Skipping...");
+                    log.warning("> Error adding " + topic.getString("value") + " to topicmap (formerId=" + formerTopicId + ", \""+ typeUri+ "\") formerId was not imported " + e + " - Skipping...");
                 }
             } catch (JSONException ex) {
                 log.severe("> Problem inspecting topic " + topic + " to add to topicmap " + map + " caused by " + ex.getCause().getMessage());
@@ -572,11 +578,12 @@ public class ImportExportPlugin extends PluginActivator {
         for (int t=0; t < assocs.length(); t++) {
             try {
                 JSONObject assoc = assocs.getJSONObject(t);
+                long formerAssocId = -1;
                 try {
-                    long formerAssocId = assoc.getLong("id");
+                    formerAssocId = assoc.getLong("id");
                     topicmaps.addAssocToTopicmap(map.getId(), assocIds.get(formerAssocId), mf.newViewProps(true, false));
                 } catch (NullPointerException npe) {
-                    log.warning("> Assoc of type ##### was not contained in export file " + npe + " - Skipped adding to Topicmap");
+                    log.warning("> Assoc=> " + assoc.toString() + " (id=" + formerAssocId + ") was not imported " + npe + " - Skipped adding to Topicmap");
                 }
             } catch (JSONException ex) {
                 Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
