@@ -83,6 +83,9 @@ public class ImportExportPlugin extends PluginActivator {
     private Hashtable<Long, Long> topicIds = new Hashtable();
     private Hashtable<Long, Long> assocIds = new Hashtable();
 
+    // Keep generic importer fail-state
+    private List<JSONObject> lostTopics = new ArrayList<>();
+
     private static final String DMX_TIME_CREATED = "dmx.timestamps.created";
     private static final String DMX_TIME_MODIFIED = "dmx.timestamps.modified";
     
@@ -437,30 +440,41 @@ public class ImportExportPlugin extends PluginActivator {
     }
 
     private void createTopicsFromDM4JSON(JSONArray topics) {
-            for (int i = 0; i < topics.length(); i++) {
+        int count = 0;
+        for (int i = 0; i < topics.length(); i++) {
+            try {
+                JSONObject object = topics.getJSONObject(i);
+                JSONObject topic = object.getJSONObject("topic");
+                String wsName = object.getString("workspaceName");
+                long created = object.getLong("created");
+                long modified = object.getLong("modified");
+                long formerId = topic.getLong("id");
+                String topicJSON = buildDMXJSONTopicModel(topic);
                 try {
-                    JSONObject object = topics.getJSONObject(i);
-                    JSONObject topic = object.getJSONObject("topic");
-                    String wsName = object.getString("workspaceName");
-                    long created = object.getLong("created");
-                    long modified = object.getLong("modified");
-                    long formerId = topic.getLong("id");
-                    String topicJSON = buildDMXJSONTopicModel(topic);
-                    try {
-                        Topic newTopic = dmx.createTopic(mf.newTopicModel(new JSONObject(topicJSON)));
-                        log.info("### Imported \"" + newTopic.getType().getUri() + "\" topic \""
-                                + newTopic.getSimpleValue() +"\" (" + newTopic.getId()+")");
-                        topicIds.put(formerId, newTopic.getId());
-                        // ### Fixme: set Created and Modified-Timestamps
-                        workspaces.assignToWorkspace(newTopic, getWorkspaceByName(wsName).getId());
-                        log.info("Debug: Assignment of topic to workspace => \"" + wsName + "\" possible, Created: " + created + ", Last Modified: " + modified);
-                    } catch (RuntimeException re) {
-                        Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic " + formerId + " (" + object.getJSONObject("topic") + ") could not be created from DM4 JSON", re);
-                    }
-                } catch (JSONException ex) {
-                    Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic could not be parsed from DM4 JSON", ex);
+                    Topic newTopic = dmx.createTopic(mf.newTopicModel(new JSONObject(topicJSON)));
+                    log.info("### Imported \"" + newTopic.getType().getUri() + "\" topic \""
+                            + newTopic.getSimpleValue() +"\" (" + newTopic.getId()+")");
+                    topicIds.put(formerId, newTopic.getId());
+                    // ### Fixme: set Created and Modified-Timestamps, Created: " + created + ", Last Modified: " + modified);
+                    workspaces.assignToWorkspace(newTopic, getWorkspaceByName(wsName).getId());
+                    count++;
+                } catch (RuntimeException re) {
+                    Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic " + formerId + " (" + object.getJSONObject("topic") + ") could not be created from DM4 JSON", re);
+                    lostTopics.add(new JSONObject(topicJSON));
                 }
+            } catch (JSONException ex) {
+                Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, "Topic could not be parsed from DM4 JSON", ex);
             }
+        }
+        log.info("##### ---- DM4 Content Restoration Report ---- ######");
+        for (JSONObject t : lostTopics) {
+            try {
+                log.info("=> Lost " + t.getString("typeUri") + ", " + t.getString("value"));
+            } catch (JSONException ex) {
+                Logger.getLogger(ImportExportPlugin.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        log.info("=> " + count + " Topics Created, " + lostTopics.size() + " Topics Lost (!) during DM4 Content Restoration Efforts");
     }
 
     private void createAssociationsFromDM4JSON(JSONArray topics) {
@@ -621,14 +635,22 @@ public class ImportExportPlugin extends PluginActivator {
         topicJSON = topicJSON.replaceAll("dmx.core.aggregation", COMPOSITION);
         topicJSON = topicJSON.replaceAll("dmx.contacts.institution", "dmx.contacts.organization");
         topicJSON = topicJSON.replaceAll("dmx.contacts.institution_name", "dmx.contacts.organization_name");
+        topicJSON = topicJSON.replaceAll("dmx.events.title", "dmx.events.event_name");
+        topicJSON = topicJSON.replaceAll("dmx.events.notes", "dmx.events.event_description");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.web_resource", "dmx.bookmarks.bookmark");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.webpage", "dmx.bookmarks.bookmark");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.url", "dmx.base.url");
         topicJSON = topicJSON.replaceAll("dmx.webbrowser.web_resource_description", "dmx.bookmarks.description");
         topicJSON = topicJSON.replaceAll("dmx.events.to", "dmx.datetime.to");
         topicJSON = topicJSON.replaceAll("dmx.events.from", "dmx.datetime.from");
-        topicJSON = topicJSON.replaceAll("dmx.events.title", "dmx.events.event_name");
-        topicJSON = topicJSON.replaceAll("dmx.events.notes", "dmx.events.event_description");
+        topicJSON = topicJSON.replaceAll("org.deepamehta.notification", "dmx.notification");
+        topicJSON = topicJSON.replaceAll("org.deepamehta.notification_seen", "dmx.notification_seen");
+        topicJSON = topicJSON.replaceAll("org.deepamehta.notification_title", "dmx.notification_title");
+        topicJSON = topicJSON.replaceAll("org.deepamehta.notification_body", "dmx.notification_body");
+        topicJSON = topicJSON.replaceAll("org.deepamehta.involved_item_id", "dmx.involved_item_id");
+        topicJSON = topicJSON.replaceAll("org.deepamehta.subscribed_item_id", "dmx.subscribed_item_id");
+        // General Modeling: "Contacts Note" (HTML) Add to "Person" and "Organization"
+        // Dogfood Modeling: "Tag" (URI: "domain.project.topic_type_19953" (Simple Text) as Child of Note)
         return topicJSON;
     }
     
@@ -637,6 +659,9 @@ public class ImportExportPlugin extends PluginActivator {
         assocJSON = assocJSON.replaceAll("dm4", "dmx");
         assocJSON = assocJSON.replaceAll("dmx.events.participant", "dmx.events.event_involvement");
         assocJSON = assocJSON.replaceAll("dmx.contacts.organization_association", "dmx.contacts.organization_involvement");
+        assocJSON = assocJSON.replaceAll("org.deepamehta.subscription_type", "dmx.subscription_type");
+        assocJSON = assocJSON.replaceAll("org.deepamehta.notification_subscription_edge", "dmx.notification_subscription_edge");
+        assocJSON = assocJSON.replaceAll("org.deepamehta.notification_recipient_edge", "dmx.notification_recipient_edge");
         return assocJSON;
     }
 
