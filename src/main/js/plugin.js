@@ -1,10 +1,10 @@
-export default ({store, dm5, axios, Vue}) => {
+export default ({store, dmx, axios, Vue}) => {
 
   return {
 
     init () {
       store.dispatch("registerUploadHandler", {
-        mimeTypes: ["application/json", "text/html"], // mimeType or file name ending in UPPERCASE, Fixme: multiple values, e.g. PNG;JPEG;JPG;
+        mimeTypes: ["application/json", "text/html"],   // mimeType or file name ending in UPPERCASE, Fixme: multiple values, e.g. PNG;JPEG;JPG;
         action: "/import-export/import/topicmap",
         selected: function(file, fileList) {
           if (file.raw.type.indexOf("html") !== -1) {
@@ -58,32 +58,5 @@ export default ({store, dm5, axios, Vue}) => {
       }
     ]
   }
-
-  /** ,
-    contextCommands: {
-      topic: topic => {
-      // Todo: Create Export Commands
-        if (topic.typeUri === 'dmx.files.file') {
-          let isLoggedIn = (store.state.accesscontrol.username) ? true : false
-          let isHtmlFile = (topic.value.indexOf('.html') != -1) // Fixme: Do the right thing.
-          let isJsonFile = (topic.value.indexOf('.json') != -1) // Fixme: Do the right thing.
-          if (isLoggedIn && isHtmlFile) {
-            return [{
-              label: '<i title="Import Bookmarks" class="fa fa-bookmark-o"></i> Import',
-              handler: id => {
-                store.dispatch("openBookmarksImportDialog", topic)
-              }
-            }]
-          } else if (isLoggedIn && isJsonFile) {
-            return [{
-              label: 'Import JSON',
-              handler: id => {
-                store.dispatch("openJsonImportDialog", topic)
-              }
-            }]
-          }
-        }
-      }
-    } **/
 
 }

@@ -1,17 +1,15 @@
 <template>
-
-    <el-dialog :visible="exportTopicmapDialog" :close="listenClose" title="Export Topicmap"
-        width="400px" :show-close="false">
-      <div class="block">
-        <el-radio v-model="exportFileType" label="json">JSON</el-radio>
-        <el-radio v-model="exportFileType" label="svg">SVG</el-radio>
-      </div>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="closeDialog">Cancel</el-button>
-        <el-button type="primary" @click="doExportTopicmap">Export Topicmap</el-button>
-      </span>
-    </el-dialog>
-
+  <el-dialog :visible="exportTopicmapDialog" :close="listenClose" title="Export Topicmap"
+      width="400px" :show-close="false">
+    <div class="block">
+      <el-radio v-model="exportFileType" label="json">JSON</el-radio>
+      <el-radio v-model="exportFileType" label="svg">SVG</el-radio>
+    </div>
+    <span slot="footer" class="dialog-footer">
+      <el-button @click="closeDialog">Cancel</el-button>
+      <el-button type="primary" @click="doExportTopicmap">Export Topicmap</el-button>
+    </span>
+  </el-dialog>
 </template>
 
 <script>
@@ -50,7 +48,3 @@ export default {
   }
 }
 </script>
-
-<style>
-</style>
-

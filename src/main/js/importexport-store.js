@@ -1,4 +1,4 @@
-export default function ({dm5, axios}) {
+export default function ({dmx, axios}) {
 
   const state = {
     exportDialogVisible: false,
@@ -14,14 +14,12 @@ export default function ({dm5, axios}) {
       state.topicmapTopicId = context.rootState.topicmaps.topicmap.id
     },
     exportTopicmap() {
-      // Todo: Utilize "topicmapId"
-      console.log("doExportTopicmap Action", state.topicmapTopicId, "type", state.exportFileType)
-      // Utilizes "dmx_topicmap_id" cookie
+      // Todo: Utilize "topicmapId", Utilizes "dmx_topicmap_id" cookie
       axios.post('/import-export/topicmap/'+state.topicmapTopicId+'/export/' + state.exportFileType)
         .then(response => {
           console.log("exportedTopicmap", response.data, state.exportFileType)
           const fileTopic = response.data
-          this.dispatch("revealTopic", { topic: new dm5.Topic(fileTopic), select: true })
+          this.dispatch("revealTopic", { topic: new dmx.Topic(fileTopic), select: true })
           this.dispatch("closeExportDialog")
         })
     },
