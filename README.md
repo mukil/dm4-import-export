@@ -41,6 +41,12 @@ All third party components incorporated into the DMX Import Export Software are 
 Version History
 ---------------
 
+**0.9.1** Jan 03, 2021
+
+* Adapted to DMX 5.1 API
+* More robust DM4 Content Importer
+* Extended DM4 Content Importer for maintaining Workspace assignments
+
 **0.9.0** Aug 16, 2020
 
 * Adapted to latest core API changes in DMX 5.0

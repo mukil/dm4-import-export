@@ -6,7 +6,7 @@
     <name>DMX Import Export</name>
     <groupId>systems.dmx</groupId>
     <artifactId>dmx-import-export</artifactId>
-    <version>0.9.1-SNAPSHOT</version>
+    <version>0.9.1</version>
     <packaging>bundle</packaging>
 
     <parent>
