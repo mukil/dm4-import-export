@@ -3,12 +3,12 @@ export default ({store, dmx, axios, Vue}) => {
   return {
 
     init () {
-      store.dispatch("registerUploadHandler", {
+      store.dispatch("upload/registerUploadHandler", {
         mimeTypes: ["application/json", "text/html"],   // mimeType or file name ending in UPPERCASE, Fixme: multiple values, e.g. PNG;JPEG;JPG;
         action: "/import-export/import/topicmap",
         selected: function(file, fileList) {
           if (file.raw.type.indexOf("html") !== -1) {
-            store.dispatch("setUploadDialogOptions", {
+            store.dispatch("upload/setUploadDialogOptions", {
               options: [
                 {value: "chrome", label: "Chromium", action: "/import-export/import/bookmarks/chromium"}, 
                 {value: "zotero", label: "Zotero Report" , action: "/import-export/import/bookmarks/zotero-report"}
@@ -16,7 +16,7 @@ export default ({store, dmx, axios, Vue}) => {
               optionsMessage: "What is the origin of this bookmarks file?"
             })
           } else if (file.raw.type.indexOf("json") !== -1) {
-            store.dispatch("setUploadDialogOptions", {
+            store.dispatch("upload/setUploadDialogOptions", {
               options: [
                 {value: "topicmap", label: "DMX Topicmap", action: "/import-export/import/topicmap"},
                 {value: "firefox", label: "Firefox Bookmarks", action: "/import-export/import/bookmarks/firefox"}
@@ -30,14 +30,14 @@ export default ({store, dmx, axios, Vue}) => {
           this.$notify({
             title: 'Import Successful', type: 'success', message: response.message
           })
-          store.dispatch("closeUploadDialog")
+          store.dispatch("upload/closeUploadDialog")
         },
         error: function(error, file, fileList) {
           console.warn("[Import Export] file upload error", error)
           this.$notify.error({
             title: 'Import Failed', message: 'Error: ' + JSON.stringify(error)
           })
-          store.dispatch("closeUploadDialog")
+          store.dispatch("upload/closeUploadDialog")
         }
       })
     },
