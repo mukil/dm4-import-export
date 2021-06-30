@@ -19,15 +19,17 @@ Next to the Topicmap dropdown menu:
 Requirements
 ------------
 
-Java 8+ and DMX 5.0
-https://github.com/jri/deepamehta#readme
+Java 8+ and DMX 5.2
+https://github.com/dmx-systems/dmx-platform#readme
 
 Installation
 ------------
 
-1. Download the DMX Import/Export plugin:
+1. Download the [DMX Import Export](https://download.dmx.systems/plugins/dmx-import-export/) plugin.
 
-2. Move the DMX Import/Export plugin to the `dmx/bundle-deploy` folder.
+2. Downlaod the [DMX Upload Dialog](https://github.com/mukil/dmx-upload-dialog/releases) plugin.
+
+3. Move the two plugins (.jar, bundle-files) to the `bundle-deploy` folder in your DMX installation.
 
 Licensing
 ---------
@@ -40,6 +42,11 @@ All third party components incorporated into the DMX Import Export Software are 
 
 Version History
 ---------------
+
+**0.9.2** Jun 30, 2021
+
+* Adapted to be compatible DMX 5.2
+* Adapted to DMX Upload Dialog 1.0.3
 
 **0.9.1** Jan 03, 2021
 
